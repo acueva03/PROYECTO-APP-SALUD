@@ -1,6 +1,6 @@
 # PROYECTO APP SALUD
 
-## 1. 📖 Descripción General del Proyecto
+## 1. Descripción General del Proyecto
 
 Esta aplicación es una plataforma diseñada para supervisar la salud, gestionar hábitos diarios y conectar a familiares dependientes con sus respectivos supervisores.
 
@@ -9,7 +9,7 @@ Esta aplicación es una plataforma diseñada para supervisar la salud, gestionar
 * Integra herramientas para registrar métricas de salud (como horas de sueño y estado de ánimo) con el fin de generar estadísticas sobre la evolución del usuario.
 * Su principal valor reside en la seguridad y la conexión en tiempo real, integrando un botón SOS en la app para situaciones críticas y un panel interactivo para que los supervisores conozcan el estado de las alertas al instante.
 
-## 2. 💻 Stack Tecnológico (Entorno de Desarrollo)
+## 2. Stack Tecnológico (Entorno de Desarrollo)
 
 El sistema divide sus tareas en dos partes fundamentales para el correcto funcionamiento de la aplicación:
 
@@ -19,7 +19,7 @@ El sistema divide sus tareas en dos partes fundamentales para el correcto funcio
 
 * Herramientas: El proyecto está optimizado y recomendado para su desarrollo en el editor Visual Studio Code.
 
-## 3. ⚙️ Metodología de Desarrollo
+## 3. Metodología de Desarrollo
 
 El proyecto ha sido gestionado bajo un marco de trabajo ágil adaptado, basado en Scrum.
 
@@ -27,7 +27,7 @@ El proyecto ha sido gestionado bajo un marco de trabajo ágil adaptado, basado e
 
 * Enfoque de Dificultad Decreciente: A diferencia de los proyectos tradicionales, el desarrollo se aborda comenzando por los retos de conexión y comunicación más complejos de la aplicación, finalizando con las estructuras de registro más sencillas.
 
-## 4. 👥 Organización del Equipo
+## 4. Organización del Equipo
 
 Para mantener el desarrollo alineado con los objetivos de la app, el equipo se ha dividido en los siguientes roles:
 
@@ -45,6 +45,6 @@ La coordinación se ha mantenido mediante los siguientes eventos ágiles:
 
 * Review & Retrospective: Demostración del trabajo al finalizar cada Sprint para comprobar el código y el funcionamiento de la app.
 
- ## 5. 🚀 Instalación y Ejecución del Entorno
+ ## 5. Instalación y Ejecución del Entorno
 
 (Añadir aquí las instrucciones detalladas paso a paso sobre cómo clonar el repositorio desde GitHub, instalar las dependencias de Python y ejecutar Flask para levantar el servidor local).
