@@ -23,7 +23,7 @@ El sistema divide sus tareas en dos partes fundamentales para el correcto funcio
 
 El proyecto ha sido gestionado bajo un marco de trabajo ágil adaptado, basado en Scrum.
 
-*El desarrollo de la app se ha estructurado en Sprints de 2 semanas cada uno.
+* El desarrollo de la app se ha estructurado en Sprints de 2 semanas cada uno.
 
 * El desarrollo se aborda comenzando por los retos de conexión y comunicación más complejos de la aplicación, como manejar nuevos lenguajes de programación, finalizando con las estructuras de registro más sencillas.
 
