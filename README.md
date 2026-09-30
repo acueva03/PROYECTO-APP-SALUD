@@ -3,8 +3,7 @@
 ## 1. Descripción General del Proyecto
 
 Esta aplicación es una plataforma diseñada para supervisar la salud, gestionar hábitos diarios y conectar a familiares dependientes con sus respectivos supervisores.
-
-* La app ofrece un entorno completo y seguro, centrado en las siguientes características clave:
+La app ofrece un entorno completo y seguro, centrado en las siguientes características clave:
 * Permite a los usuarios crear un perfil propio en la aplicación con sus datos básicos (nombre, edad, peso) y configurar alarmas o recordatorios para organizar su rutina diaria.
 * Integra herramientas para registrar métricas de salud (como horas de sueño y estado de ánimo) con el fin de generar estadísticas sobre la evolución del usuario.
 * Su principal valor reside en la seguridad y la conexión en tiempo real, integrando un botón SOS en la app para situaciones críticas y un panel interactivo para que los supervisores conozcan el estado de las alertas al instante.
