@@ -9,7 +9,7 @@ Esta aplicación es una plataforma diseñada para supervisar la salud, gestionar
 * Integra herramientas para registrar métricas de salud (como horas de sueño y estado de ánimo) con el fin de generar estadísticas sobre la evolución del usuario.
 * Su principal valor reside en la seguridad y la conexión en tiempo real, integrando un botón SOS en la app para situaciones críticas y un panel interactivo para que los supervisores conozcan el estado de las alertas al instante.
 
-## 2. Stack Tecnológico (Entorno de Desarrollo)
+## 2. Entorno de Desarrollo
 
 El sistema divide sus tareas en dos partes fundamentales para el correcto funcionamiento de la aplicación:
 
