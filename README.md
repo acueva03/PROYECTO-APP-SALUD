@@ -35,7 +35,7 @@ Para mantener el desarrollo alineado con los objetivos de la app, el equipo se h
 
 * **Scrum Master (Alberto):** Facilitador del proceso que ayuda al equipo a superar bloqueos técnicos, especialmente en los retos de conexión iniciales de la app.
 
-* **Equipo de Desarrollo:** Encargados de implementar la lógica y construir la interfaz visual de la aplicación. Esta conformado por: Andrés Cuevas, Javier Monfort, Laura Ávila, Alberto Vilches y Sofía Puebla.
+* **Equipo de Desarrollo:** Encargados de implementar la lógica y construir la interfaz visual de la aplicación. Esta conformado por: **_Andrés Cuevas, Javier Monfort, Laura Ávila, Alberto Vilches y Sofía Puebla_**.
 
 La coordinación se ha mantenido mediante los siguientes eventos ágiles:
 
