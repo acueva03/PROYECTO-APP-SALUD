@@ -13,11 +13,11 @@ Esta aplicación es una plataforma diseñada para supervisar la salud, gestionar
 
 El sistema divide sus tareas en dos partes fundamentales para el correcto funcionamiento de la aplicación:
 
-* Motor Interno: Utiliza Python como lenguaje principal junto con Flask, un entorno de trabajo que gestiona toda la lógica, cuentas y datos, permitiendo crear una experiencia interactiva fluida.
+* **Motor Interno:** Utiliza Python como lenguaje principal junto con Flask, un entorno de trabajo que gestiona toda la lógica, cuentas y datos, permitiendo crear una experiencia interactiva fluida.
 
-* Interfaz de la App: Emplea HTML5, CSS3 y JavaScript para construir la interfaz visual de la aplicación, garantizando que sea accesible y funcione de manera transversal.
+* **Interfaz de la App:** Emplea HTML5, CSS3 y JavaScript para construir la interfaz visual de la aplicación, garantizando que sea accesible y funcione de manera transversal.
 
-* Herramientas: El proyecto se desarrollará en el editor Visual Studio Code.
+* **Herramientas:** El proyecto se desarrollará en el editor Visual Studio Code.
 
 ## 3. Metodología de Desarrollo
 
@@ -31,19 +31,19 @@ El proyecto ha sido gestionado bajo un marco de trabajo ágil adaptado, basado e
 
 Para mantener el desarrollo alineado con los objetivos de la app, el equipo se ha dividido en los siguientes roles:
 
-* Product Owner (Javier): Responsable de gestionar y priorizar las Historias de Usuario, asegurando que se respeta la planificación (de mayor a menor).
+* **Product Owner (Javier):** Responsable de gestionar y priorizar las Historias de Usuario, asegurando que se respeta la planificación (de mayor a menor).
 
-* Scrum Master (Alberto): Facilitador del proceso que ayuda al equipo a superar bloqueos técnicos, especialmente en los retos de conexión iniciales de la app.
+* **Scrum Master (Alberto):** Facilitador del proceso que ayuda al equipo a superar bloqueos técnicos, especialmente en los retos de conexión iniciales de la app.
 
-* Equipo de Desarrollo: Encargados de implementar la lógica y construir la interfaz visual de la aplicación. Esta conformado por: Andrés Cuevas, Javier Monfort, Laura Ávila, Alberto Vilches y Sofía Puebla.
+* **Equipo de Desarrollo:** Encargados de implementar la lógica y construir la interfaz visual de la aplicación. Esta conformado por: Andrés Cuevas, Javier Monfort, Laura Ávila, Alberto Vilches y Sofía Puebla.
 
 La coordinación se ha mantenido mediante los siguientes eventos ágiles:
 
-* Sprint Planning: Reunión al inicio de cada ciclo de 2 semanas para planificar los retos técnicos.
+* **Sprint Planning:** Reunión al inicio de cada ciclo de 2 semanas para planificar los retos técnicos.
 
-* Daily Scrum: Sincronización diaria rápida para revisar logros, objetivos del día y obstáculos.
+* **Daily Scrum:** Sincronización diaria rápida para revisar logros, objetivos del día y obstáculos.
 
-* Review & Retrospective: Reflexión del trabajo al finalizar cada Sprint para comprobar el código y el funcionamiento de la app.
+* **Review & Retrospective:** Reflexión del trabajo al finalizar cada Sprint para comprobar el código y el funcionamiento de la app.
 
  ## 5. Instalación y Ejecución del Entorno
 
