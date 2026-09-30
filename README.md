@@ -30,9 +30,9 @@ El proyecto ha sido gestionado bajo un marco de trabajo ágil adaptado, basado e
 
 Para mantener el desarrollo alineado con los objetivos de la app, el equipo se ha dividido en los siguientes roles:
 
-* **Product Owner (Javier):** Responsable de gestionar y priorizar las Historias de Usuario, asegurando que se respeta la planificación (de mayor a menor).
+* **Product Owner (_Javier_):** Responsable de gestionar y priorizar las Historias de Usuario, asegurando que se respeta la planificación (de mayor a menor).
 
-* **Scrum Master (Alberto):** Facilitador del proceso que ayuda al equipo a superar bloqueos técnicos, especialmente en los retos de conexión iniciales de la app.
+* **Scrum Master (_Alberto_):** Facilitador del proceso que ayuda al equipo a superar bloqueos técnicos, especialmente en los retos de conexión iniciales de la app.
 
 * **Equipo de Desarrollo:** Encargados de implementar la lógica y construir la interfaz visual de la aplicación. Esta conformado por: **_Andrés Cuevas, Javier Monfort, Laura Ávila, Alberto Vilches y Sofía Puebla_**.
 
