@@ -52,9 +52,8 @@ Si eres un nuevo usuario o supervisor, esta aplicación está diseñada para aco
 
  ## 5. Instalación y Ejecución del Entorno
 
-En la terminal de VS Code hay que poner los comandos:
+Para ejecutar el código Python que da el enlace a la web con Flask, en la terminal de VS Code hay que poner los comandos:
 * source venv/bin/activate
-* python3 ap.py
-Para ejecutar el código Python que da el enlace a la web con Flask.
+* python3 app.py
 
 (Añadiremos aquí las instrucciones detalladas paso a paso sobre cómo instalar y utilizar nuestra app).
