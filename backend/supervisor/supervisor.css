@@ -1,0 +1,736 @@
+/* =====================================================
+APP SALUD - PANEL DEL SUPERVISOR
+Diseño visual del Sprint 1
+===================================================== */
+
+
+/* ---------- CONFIGURACIÓN GENERAL ---------- */
+
+* {
+box-sizing: border-box;
+margin: 0;
+padding: 0;
+}
+
+
+body {
+font-family: Arial, Helvetica, sans-serif;
+
+background-color: #f4f7f9;
+
+color: #1f2933;
+
+min-height: 100vh;
+}
+
+
+/* ---------- CABECERA ---------- */
+
+.header {
+background-color: #ffffff;
+
+border-bottom: 1px solid #e2e8ed;
+
+padding: 18px 30px;
+}
+
+
+.header-contenido {
+max-width: 1100px;
+
+margin: 0 auto;
+
+display: flex;
+
+justify-content: space-between;
+
+align-items: center;
+
+gap: 20px;
+}
+
+
+/* LOGO */
+
+.logo {
+display: flex;
+
+align-items: center;
+
+gap: 12px;
+}
+
+
+.logo-icono {
+width: 48px;
+height: 48px;
+
+background-color: #1677a8;
+
+color: white;
+
+border-radius: 14px;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+font-size: 25px;
+
+box-shadow: 0 4px 10px rgba(22, 119, 168, 0.20);
+}
+
+
+.logo h1 {
+font-size: 21px;
+
+color: #123b53;
+
+margin-bottom: 3px;
+}
+
+
+.logo p {
+color: #718096;
+
+font-size: 13px;
+}
+
+
+/* ESTADO DEL SISTEMA */
+
+.estado-sistema {
+display: flex;
+
+align-items: center;
+
+gap: 8px;
+
+background-color: #eef8f2;
+
+color: #27734a;
+
+padding: 9px 14px;
+
+border-radius: 20px;
+
+font-size: 14px;
+
+font-weight: bold;
+}
+
+
+.punto-verde {
+width: 9px;
+height: 9px;
+
+display: inline-block;
+
+background-color: #35a66a;
+
+border-radius: 50%;
+}
+
+
+/* ---------- CONTENIDO ---------- */
+
+.contenido {
+width: 90%;
+
+max-width: 1100px;
+
+margin: 0 auto;
+
+padding: 40px 0 60px;
+}
+
+
+/* ---------- BIENVENIDA ---------- */
+
+.bienvenida {
+margin-bottom: 30px;
+}
+
+
+.saludo-pequeno {
+color: #1677a8;
+
+font-size: 12px;
+
+font-weight: bold;
+
+letter-spacing: 1.2px;
+
+margin-bottom: 8px;
+}
+
+
+.bienvenida h2 {
+font-size: 32px;
+
+color: #123b53;
+
+margin-bottom: 8px;
+}
+
+
+.bienvenida > div > p:last-child {
+color: #6b7b88;
+
+font-size: 16px;
+}
+
+
+/* ---------- TARJETAS ---------- */
+
+.tarjeta {
+background-color: #ffffff;
+
+border: 1px solid #e4eaee;
+
+border-radius: 18px;
+
+padding: 28px;
+
+margin-bottom: 22px;
+
+box-shadow: 0 5px 18px rgba(24, 55, 72, 0.06);
+}
+
+
+/* ---------- TÍTULOS DE SECCIÓN ---------- */
+
+.titulo-seccion {
+display: flex;
+
+justify-content: space-between;
+
+align-items: center;
+
+gap: 20px;
+
+margin-bottom: 25px;
+}
+
+
+.etiqueta {
+color: #7b8b96;
+
+font-size: 11px;
+
+font-weight: bold;
+
+letter-spacing: 1px;
+
+margin-bottom: 5px;
+}
+
+
+.titulo-seccion h2 {
+color: #183b4d;
+
+font-size: 21px;
+}
+
+
+/* ---------- PACIENTE ---------- */
+
+.estado-conectado {
+display: flex;
+
+align-items: center;
+
+gap: 7px;
+
+color: #27734a;
+
+background-color: #eef8f2;
+
+padding: 8px 13px;
+
+border-radius: 20px;
+
+font-size: 13px;
+
+font-weight: bold;
+}
+
+
+.paciente-info {
+display: flex;
+
+align-items: center;
+
+gap: 18px;
+
+padding-bottom: 25px;
+
+border-bottom: 1px solid #edf1f3;
+}
+
+
+.avatar {
+width: 68px;
+height: 68px;
+
+background-color: #e4f2f8;
+
+color: #1677a8;
+
+border-radius: 50%;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+font-size: 20px;
+
+font-weight: bold;
+}
+
+
+.datos-paciente h3 {
+color: #183b4d;
+
+font-size: 22px;
+
+margin-bottom: 5px;
+}
+
+
+.datos-paciente p {
+color: #778793;
+
+font-size: 14px;
+}
+
+
+/* ---------- DATOS EXTRA ---------- */
+
+.datos-extra {
+display: grid;
+
+grid-template-columns: 1fr 1fr;
+
+gap: 20px;
+
+padding-top: 22px;
+}
+
+
+.dato {
+display: flex;
+
+align-items: center;
+
+gap: 12px;
+}
+
+
+.icono {
+width: 40px;
+height: 40px;
+
+background-color: #f0f6f8;
+
+color: #1677a8;
+
+border-radius: 10px;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+font-size: 18px;
+}
+
+
+.dato div {
+display: flex;
+
+flex-direction: column;
+
+gap: 4px;
+}
+
+
+.dato span {
+color: #82909a;
+
+font-size: 12px;
+}
+
+
+.dato strong {
+color: #314955;
+
+font-size: 14px;
+}
+
+
+/* ---------- CONTADOR DE ALERTAS ---------- */
+
+.contador-alertas {
+background-color: #edf8f1;
+
+color: #27734a;
+
+padding: 7px 12px;
+
+border-radius: 20px;
+
+font-size: 13px;
+
+font-weight: bold;
+}
+
+
+/* ---------- ESTADO DE ALERTAS ---------- */
+
+.estado-alertas {
+background-color: #f6faf8;
+
+border: 1px solid #dceee3;
+
+border-radius: 15px;
+
+text-align: center;
+
+padding: 38px 20px;
+}
+
+
+.icono-correcto {
+width: 64px;
+height: 64px;
+
+margin: 0 auto 15px;
+
+background-color: #35a66a;
+
+color: white;
+
+border-radius: 50%;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+font-size: 32px;
+
+font-weight: bold;
+
+box-shadow: 0 5px 15px rgba(53, 166, 106, 0.20);
+}
+
+
+.estado-alertas h3 {
+color: #256443;
+
+font-size: 21px;
+
+margin-bottom: 7px;
+}
+
+
+.estado-alertas p {
+color: #718096;
+
+font-size: 15px;
+
+margin-bottom: 12px;
+}
+
+
+.ultima-revision {
+color: #9aa7af;
+
+font-size: 12px;
+}
+
+
+/* =====================================================
+ZONA DE ALERTA FUTURA
+=====================================================
+
+Esta clase queda preparada para cuando el sistema
+reciba una alerta SOS.
+
+De momento NO se utiliza.
+
+Más adelante JavaScript podrá añadir:
+
+class="estado-alertas alerta-activa"
+
+===================================================== */
+
+
+.alerta-activa {
+background-color: #fff1f1;
+
+border: 3px solid #d62828;
+
+color: #a71919;
+
+animation: parpadeo 1s infinite;
+}
+
+
+.alerta-activa .icono-correcto {
+background-color: #d62828;
+}
+
+
+@keyframes parpadeo {
+
+50% {
+opacity: 0.55;
+}
+
+}
+
+
+/* ---------- ACTIVIDAD ---------- */
+
+.actividad {
+display: flex;
+
+flex-direction: column;
+}
+
+
+.actividad-item {
+display: flex;
+
+align-items: center;
+
+gap: 14px;
+
+padding: 16px 0;
+
+border-bottom: 1px solid #edf1f3;
+}
+
+
+.actividad-item:last-child {
+border-bottom: none;
+
+padding-bottom: 0;
+}
+
+
+.actividad-icono {
+width: 38px;
+height: 38px;
+
+border-radius: 10px;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+font-weight: bold;
+}
+
+
+.actividad-icono.conectado {
+background-color: #eaf7ef;
+
+color: #35a66a;
+}
+
+
+.actividad-icono.sistema {
+background-color: #eaf4f8;
+
+color: #1677a8;
+}
+
+
+.actividad-texto {
+display: flex;
+
+flex-direction: column;
+
+gap: 4px;
+
+flex: 1;
+}
+
+
+.actividad-texto strong {
+color: #344d59;
+
+font-size: 14px;
+}
+
+
+.actividad-texto span {
+color: #8a98a1;
+
+font-size: 12px;
+}
+
+
+.actividad-item time {
+color: #8a98a1;
+
+font-size: 12px;
+}
+
+
+/* ---------- AVISO ---------- */
+
+.aviso {
+display: flex;
+
+align-items: center;
+
+gap: 12px;
+
+background-color: #edf6fa;
+
+border: 1px solid #d9eaf1;
+
+border-radius: 12px;
+
+padding: 15px 18px;
+
+color: #55727f;
+
+font-size: 13px;
+}
+
+
+.aviso-icono {
+width: 25px;
+height: 25px;
+
+flex-shrink: 0;
+
+border-radius: 50%;
+
+background-color: #1677a8;
+
+color: white;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+font-weight: bold;
+}
+
+
+/* ---------- PIE DE PÁGINA ---------- */
+
+footer {
+text-align: center;
+
+padding: 20px;
+
+color: #9aa7af;
+
+font-size: 12px;
+}
+
+
+/* =====================================================
+DISEÑO PARA MÓVIL
+===================================================== */
+
+@media (max-width: 700px) {
+
+.header {
+padding: 15px 20px;
+}
+
+
+.header-contenido {
+align-items: flex-start;
+}
+
+
+.estado-sistema {
+font-size: 12px;
+
+padding: 7px 10px;
+}
+
+
+.contenido {
+width: 92%;
+
+padding-top: 30px;
+}
+
+
+.bienvenida h2 {
+font-size: 27px;
+}
+
+
+.tarjeta {
+padding: 22px;
+}
+
+
+.titulo-seccion {
+align-items: flex-start;
+
+flex-direction: column;
+}
+
+
+.datos-extra {
+grid-template-columns: 1fr;
+}
+
+
+.actividad-item time {
+display: none;
+}
+
+}
+
+
+@media (max-width: 450px) {
+
+.logo h1 {
+font-size: 18px;
+}
+
+
+.logo-icono {
+width: 42px;
+height: 42px;
+}
+
+
+.estado-sistema {
+display: none;
+}
+
+
+.bienvenida h2 {
+font-size: 24px;
+}
+
+
+.paciente-info {
+align-items: flex-start;
+}
+
+}

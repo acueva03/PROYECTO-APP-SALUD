@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>App Salud - Panel del Supervisor</title>
+
+<link rel="stylesheet" href="supervisor.css">
+</head>
+
+<body>
+
+<!-- CABECERA -->
+<header class="header">
+
+<div class="header-contenido">
+
+<div class="logo">
+<div class="logo-icono">♥</div>
+
+<div>
+<h1>App Salud</h1>
+<p>Panel de supervisión</p>
+</div>
+</div>
+
+<div class="estado-sistema">
+<span class="punto-verde"></span>
+Sistema activo
+</div>
+
+</div>
+
+</header>
+
+
+<!-- CONTENIDO PRINCIPAL -->
+<main class="contenido">
+
+<!-- BIENVENIDA -->
+<section class="bienvenida">
+
+<div>
+<p class="saludo-pequeno">PANEL DEL SUPERVISOR</p>
+
+<h2>Buenos días, Gonzalo <span>👋</span></h2>
+
+<p>
+Consulta aquí el estado de tu familiar
+y sus alertas.
+</p>
+</div>
+
+</section>
+
+
+<!-- INFORMACIÓN DEL PACIENTE -->
+<section class="tarjeta paciente">
+
+<div class="titulo-seccion">
+
+<div>
+<p class="etiqueta">PACIENTE SUPERVISADO</p>
+<h2>Información del paciente</h2>
+</div>
+
+<span class="estado-conectado">
+<span class="punto-verde"></span>
+Conectada
+</span>
+
+</div>
+
+
+<div class="paciente-info">
+
+<div class="avatar">
+MG
+</div>
+
+<div class="datos-paciente">
+
+<h3>María García</h3>
+
+<p>
+Paciente supervisada
+</p>
+
+</div>
+
+</div>
+
+
+<div class="datos-extra">
+
+<div class="dato">
+
+<span class="icono">🕐</span>
+
+<div>
+<span>Última conexión</span>
+<strong>Hoy, 20:15</strong>
+</div>
+
+</div>
+
+
+<div class="dato">
+
+<span class="icono">✓</span>
+
+<div>
+<span>Estado</span>
+<strong>Todo correcto</strong>
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- ALERTAS -->
+<section class="tarjeta">
+
+<div class="titulo-seccion">
+
+<div>
+<p class="etiqueta">SUPERVISIÓN</p>
+<h2>Estado de las alertas</h2>
+</div>
+
+<span class="contador-alertas">
+0 alertas
+</span>
+
+</div>
+
+
+<!--
+ZONA PREPARADA PARA EL FUTURO SISTEMA DE ALERTAS
+
+Actualmente estática.
+En el futuro JavaScript podrá cambiar esta sección
+cuando llegue una alerta SOS.
+-->
+
+<div class="estado-alertas">
+
+<div class="icono-correcto">
+✓
+</div>
+
+<h3>Todo está bien</h3>
+
+<p>
+No hay alertas activas en este momento.
+</p>
+
+<span class="ultima-revision">
+Última revisión: ahora
+</span>
+
+</div>
+
+</section>
+
+
+<!-- ACTIVIDAD RECIENTE -->
+<section class="tarjeta">
+
+<div class="titulo-seccion">
+
+<div>
+<p class="etiqueta">ACTIVIDAD</p>
+<h2>Actividad reciente</h2>
+</div>
+
+</div>
+
+
+<div class="actividad">
+
+<div class="actividad-item">
+
+<div class="actividad-icono conectado">
+✓
+</div>
+
+<div class="actividad-texto">
+<strong>Paciente conectada</strong>
+<span>La aplicación está funcionando correctamente</span>
+</div>
+
+<time>20:15</time>
+
+</div>
+
+
+<div class="actividad-item">
+
+<div class="actividad-icono sistema">
+●
+</div>
+
+<div class="actividad-texto">
+<strong>Sistema activo</strong>
+<span>Conexión establecida correctamente</span>
+</div>
+
+<time>20:10</time>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- AVISO INFORMATIVO -->
+<section class="aviso">
+
+<span class="aviso-icono">i</span>
+
+<p>
+Las alertas aparecerán aquí cuando el paciente
+necesite asistencia.
+</p>
+
+</section>
+
+</main>
+
+
+<!-- PIE DE PÁGINA -->
+<footer>
+
+<p>
+App Salud · Panel del Supervisor
+</p>
+
+</footer>
+
+</body>
+
+</html>
