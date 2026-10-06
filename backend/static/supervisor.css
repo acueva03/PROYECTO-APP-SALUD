@@ -734,3 +734,24 @@ align-items: flex-start;
 }
 
 }
+
+.btn-atender {
+    margin-top: 12px;
+    padding: 12px 22px;
+    background-color: #d62828;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-atender:hover {
+    background-color: #a71919;
+}
+
+.contador-alertas.con-alertas {
+    background-color: #fff1f1;
+    color: #d62828;
+}

@@ -1,3 +1,9 @@
 venv/
 .vscode/
 .DS_Store/
+<<<<<<< HEAD
+=======
+instance/
+*.db
+__pycache__/
+>>>>>>> d4d40be48b721d326b5e2540bfa1f57c4dad7ffa
