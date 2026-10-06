@@ -1,0 +1,211 @@
+/* ==========================================================================
+   Variables de Diseño y Accesibilidad
+   ========================================================================== */
+:root {
+    --color-fondo: #F4F6F9;
+    --color-texto: #1A1A1A;
+    --color-encabezado: #0F2C59;
+    
+    /* Colores del Botón SOS (Alto contraste) */
+    --color-sos-base: #D32F2F;
+    --color-sos-hover: #B71C1C;
+    --color-sos-activo: #8E0000;
+    --color-sos-sombra: rgba(211, 47, 47, 0.4);
+    
+    /* Indicador de foco para accesibilidad por teclado */
+    --color-foco: #0288D1;
+    
+    --fuente-principal: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+}
+
+/* ==========================================================================
+   Estilos Generales
+   ========================================================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--fuente-principal);
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    text-align: center;
+}
+
+/* ==========================================================================
+   Encabezado
+   ========================================================================== */
+.encabezado-asistencia {
+    background-color: var(--color-encabezado);
+    color: #FFFFFF;
+    padding: 1.25rem 1rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.contenedor-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.icono-asistencia {
+    font-size: 1.8rem;
+}
+
+.encabezado-asistencia h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   Área Principal y Botón SOS
+   ========================================================================== */
+.contenedor-principal {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+
+.seccion-sos {
+    max-width: 550px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.instruccion-sos {
+    font-size: 1.6rem;
+    color: #2C3E50;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.area-boton {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
+/* Diseño del Botón SOS Accesible y Destacado */
+.btn-sos {
+    width: 270px;
+    height: 270px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #E53935 0%, var(--color-sos-base) 100%);
+    color: #FFFFFF;
+    border: 8px solid #FFFFFF;
+    box-shadow: 0 12px 28px var(--color-sos-sombra), 0 0 0 12px rgba(211, 47, 47, 0.15);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.icono-sos {
+    font-size: 3.2rem;
+    margin-bottom: 0.2rem;
+}
+
+.texto-sos {
+    font-size: 3.8rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+    line-height: 1;
+}
+
+.subtexto-sos {
+    font-size: 0.85rem;
+    font-weight: 800;
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+}
+
+/* Estados Interactivos */
+.btn-sos:hover {
+    background: var(--color-sos-hover);
+    transform: scale(1.04);
+    box-shadow: 0 16px 36px rgba(183, 28, 28, 0.5), 0 0 0 16px rgba(211, 47, 47, 0.25);
+}
+
+.btn-sos:active {
+    background: var(--color-sos-activo);
+    transform: scale(0.96);
+    box-shadow: 0 6px 16px rgba(142, 0, 0, 0.6);
+}
+
+/* Accesibilidad por teclado (Teclas Tab / Enter) */
+.btn-sos:focus-visible {
+    outline: 6px solid var(--color-foco);
+    outline-offset: 10px;
+}
+
+/* ==========================================================================
+   Indicador de Estado y Pie
+   ========================================================================== */
+.estado-sistema {
+    font-size: 1.15rem;
+    color: #334155;
+    background-color: #E2E8F0;
+    padding: 0.75rem 1.5rem;
+    border-radius: 20px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.punto-estado {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.punto-estado.verde {
+    background-color: #2E7D32;
+}
+
+.pie-asistencia {
+    background-color: #E2E8F0;
+    padding: 1rem;
+    font-size: 1rem;
+    color: #475569;
+}
+
+/* ==========================================================================
+   Adaptación Responsive (Pantallas pequeñas y móviles)
+   ========================================================================== */
+@media (max-width: 480px) {
+    .btn-sos {
+        width: 230px;
+        height: 230px;
+    }
+
+    .texto-sos {
+        font-size: 3.2rem;
+    }
+
+    .instruccion-sos {
+        font-size: 1.3rem;
+    }
+}
