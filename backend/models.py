@@ -3,7 +3,7 @@ from datetime import datetime, date, timezone
 
 db = SQLAlchemy()
 
-
+# Fecha y hora actual
 def ahora(): 
     return datetime.now(timezone.utc)
 
@@ -15,7 +15,7 @@ supervisor_dependiente = db.Table(
     db.Column('dependiente_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
 )
 
-
+# Un usuario de la aplicación (datos personales)
 class User(db.Model):
     __tablename__ = 'users'
 
@@ -48,7 +48,7 @@ class User(db.Model):
     )
 
 
-
+# Guarda la ficha médica de un usuario
 class MedicalProfile(db.Model):
     __tablename__ = 'medical_profiles'
 
@@ -61,7 +61,17 @@ class MedicalProfile(db.Model):
     contacto_emergencia_nombre = db.Column(db.String(120))
     contacto_emergencia_telefono = db.Column(db.String(20))
 
+# Guarda las métricas diarias de un usuario (fecha, horas de sueño, estado de ánimo)
+class HealthMetric(db.Model):
+    __tablename__ = 'health_metrics'
 
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    fecha = db.Column(db.Date, default=date.today)      # CAMBIO
+    horas_sueno = db.Column(db.Float, nullable=True)
+    estado_animo = db.Column(db.String(50), nullable=True)
+
+# Almacena los avisos y recordatorios de un usuario
 class Alarm(db.Model):
     __tablename__ = 'alarms'
 
@@ -72,17 +82,7 @@ class Alarm(db.Model):
     es_repetitiva = db.Column(db.Boolean, default=False)
     activa = db.Column(db.Boolean, default=True)
 
-
-class HealthMetric(db.Model):
-    __tablename__ = 'health_metrics'
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    fecha = db.Column(db.Date, default=date.today)      # CAMBIO
-    horas_sueno = db.Column(db.Float, nullable=True)
-    estado_animo = db.Column(db.String(50), nullable=True)
-
-
+# Alerta SOS, guarda la fecha/hora y su estado: activa o atendida
 class AlertSOS(db.Model):
     __tablename__ = 'alerts_sos'
 
