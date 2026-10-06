@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, render_template, request, jsonify
 from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile
 
@@ -5,7 +7,8 @@ from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile
 app = Flask(__name__)
 
 # Configuración de SQLite (creará el archivo app_salud.db localmente)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app_salud.db'
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'app_salud.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -133,6 +136,22 @@ def atender_alerta(alerta_id):
     alerta.estado = 'ATENDIDA'
     db.session.commit()
     return jsonify({'mensaje': 'Alerta atendida'}), 200
+
+@app.route('/api/usuarios/<int:user_id>', methods=['GET'])
+def obtener_usuario(user_id):
+    usuario = db.session.get(User, user_id)
+    if not usuario:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    return jsonify({
+        'id': usuario.id,
+        'nombre': usuario.nombre,
+        'apellidos': usuario.apellidos,
+        'telefono': usuario.telefono,
+        'edad': usuario.edad,
+        'peso': usuario.peso,
+        'altura': usuario.altura,
+        'rol': usuario.rol
+    })
 
 if __name__ == '__main__':
     # Arrancamos el servidor en modo desarrollo
