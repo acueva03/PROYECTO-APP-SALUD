@@ -3,6 +3,55 @@ from flask import Flask, render_template, request, jsonify
 # Inicializamos la aplicación Flask
 app = Flask(__name__)
 
+from flask import Flask, jsonify, request
+from models import db, User, Alarm, HealthMetric, AlertSOS
+
+# Configuración de SQLite (creará el archivo app_salud.db localmente)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app_salud.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
+# Crear las tablas automáticamente al iniciar
+with app.app_context():
+    db.create_all()
+
+# --- EJEMPLOS DE RUTAS API ---
+
+@app.route('/api/usuarios', methods=['POST'])
+def crear_usuario():
+    data = request.get_json()
+    nuevo_usuario = User(
+        nombre=data.get('nombre'),
+        edad=data.get('edad'),
+        peso=data.get('peso'),
+        rol=data.get('rol', 'dependiente')
+    )
+    db.session.add(nuevo_usuario)
+    db.session.commit()
+    return jsonify({'mensaje': 'Usuario creado con éxito', 'id': nuevo_usuario.id}), 201
+
+@app.route('/api/alarmas', methods=['POST'])
+def crear_alarma():
+    data = request.get_json()
+    nueva_alarma = Alarm(
+        user_id=data.get('user_id'),
+        titulo=data.get('titulo'),
+        hora=data.get('hora'),
+        es_repetitiva=data.get('es_repetitiva', False)
+    )
+    db.session.add(nueva_alarma)
+    db.session.commit()
+    return jsonify({'mensaje': 'Alarma configurada con éxito'}), 201
+
+@app.route('/api/sos', methods=['POST'])
+def activar_sos():
+    data = request.get_json()
+    alerta = AlertSOS(user_id=data.get('user_id'))
+    db.session.add(alerta)
+    db.session.commit()
+    return jsonify({'mensaje': 'Alerta SOS emitida', 'alerta_id': alerta.id}), 201
+
 # Ruta principal: Muestra la pantalla del paciente (El botón SOS de Laura)
 @app.route('/')
 def inicio():
