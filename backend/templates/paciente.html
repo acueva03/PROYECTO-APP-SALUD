@@ -1,16 +1,58 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Andrés</title>
-</head>
-<body>
-    <!-- El botón que simula el diseño que hará Laura -->
-    <button id="boton-sos" style="padding: 20px; background: red; color: white; font-size: 20px;">
-        BOTÓN DE EMERGENCIA
-    </button>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App de Salud - Botón SOS</title>
 
-    <!-- Esta parte conecta esta página web con mi código JavaScript -->
-    <script src="/static/conexion.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='paciente.css') }}">
+</head>
+
+<body>
+
+    <!-- ENCABEZADO -->
+    <header class="encabezado-asistencia">
+        <div class="contenedor-cabecera">
+            <span class="icono-asistencia" aria-hidden="true">♥</span>
+            <h1>App de Salud</h1>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="contenedor-principal">
+        <section class="seccion-sos">
+
+            <p class="instruccion-sos">
+                ¿Necesitas ayuda?<br>
+                Pulsa el botón rojo
+            </p>
+
+            <div class="area-boton">
+                <!-- El id "boton-sos" lo usa conexion.js: no cambiarlo -->
+                <button id="boton-sos" class="btn-sos" type="button"
+                        aria-label="Botón de emergencia SOS. Pulsa para pedir ayuda inmediata">
+                    <span class="icono-sos" aria-hidden="true">⚠</span>
+                    <span class="texto-sos">SOS</span>
+                    <span class="subtexto-sos">Pedir ayuda</span>
+                </button>
+            </div>
+
+            <div class="estado-sistema" role="status">
+                <span class="punto-estado verde" aria-hidden="true"></span>
+                Sistema activo
+            </div>
+
+        </section>
+    </main>
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="pie-asistencia">
+        <p>Al pulsar el botón, tu supervisor recibirá un aviso inmediato.</p>
+    </footer>
+
+    <!-- Lógica de conexión con el servidor (Andrés) -->
+    <script src="{{ url_for('static', filename='conexion.js') }}"></script>
 </body>
+
 </html>
