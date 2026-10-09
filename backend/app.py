@@ -153,6 +153,26 @@ def obtener_usuario(user_id):
         'rol': usuario.rol
     })
 
+@app.route('/api/alarmas/<int:alarma_id>/estado', methods=['PATCH'])
+def cambiar_estado_alarma(alarma_id):
+    alarma = db.session.get(Alarm, alarma_id)
+    if not alarma:
+        return jsonify({'error': 'Alarma no encontrada'}), 404
+
+    data = request.get_json() or {}
+    # Si el frontend envía {"activa": false}, se asigna; si no envía nada, invierte el valor actual
+    if 'activa' in data:
+        alarma.activa = bool(data['activa'])
+    else:
+        alarma.activa = not alarma.activa
+
+    db.session.commit()
+    return jsonify({
+        'mensaje': 'Estado de alarma actualizado',
+        'alarma_id': alarma.id,
+        'activa': alarma.activa
+    }), 200
+
 if __name__ == '__main__':
     # Arrancamos el servidor en modo desarrollo
     app.run(debug=True)
