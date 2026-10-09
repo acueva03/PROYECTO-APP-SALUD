@@ -1,5 +1,7 @@
 import os
-
+import threading
+import time
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile
 
@@ -172,6 +174,42 @@ def cambiar_estado_alarma(alarma_id):
         'alarma_id': alarma.id,
         'activa': alarma.activa
     }), 200
+
+    
+    def verificar_alarmas_programadas():
+    """Hilo secundario que se ejecuta continuamente en el servidor."""
+    ultima_hora_comprobada = ""
+    
+    while True:
+        # Formato HH:MM coincidente con el guardado en la base de datos
+        hora_actual = datetime.now().strftime('%H:%M')
+
+        # Solo ejecutamos la comprobación una vez por minuto
+        if hora_actual != ultima_hora_comprobada:
+            ultima_hora_comprobada = hora_actual
+            
+            with app.app_context():
+                # Consultar alarmas activas para el minuto exacto
+                alarmas_a_disparar = Alarm.query.filter_by(activa=True, hora=hora_actual).all()
+                
+                for alarma in alarmas_a_disparar:
+                    # Generar automáticamente un registro de alerta SOS para notificar al supervisor
+                    nueva_alerta = AlertSOS(user_id=alarma.user_id)
+                    db.session.add(nueva_alerta)
+
+                    # Si la alarma no es de tipo diario/repetitivo, se desactiva tras sonar
+                    if not alarma.es_repetitiva:
+                        alarma.activa = False
+
+                if alarmas_a_disparar:
+                    db.session.commit()
+                    print(f"[{hora_actual}] ¡Se dispararon {len(alarmas_a_disparar)} alarmas!")
+
+        time.sleep(10) # Comprueba cada 10 segundos para no saturar la CPU
+
+# Iniciar el verificador al arrancar el servidor
+hilo_alarmas = threading.Thread(target=verificar_alarmas_programadas, daemon=True)
+hilo_alarmas.start()
 
 if __name__ == '__main__':
     # Arrancamos el servidor en modo desarrollo
