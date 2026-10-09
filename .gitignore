@@ -4,6 +4,10 @@ venv/
 <<<<<<< HEAD
 =======
 instance/
+<<<<<<< HEAD
 *.db
 __pycache__/
 >>>>>>> d4d40be48b721d326b5e2540bfa1f57c4dad7ffa
+=======
+__pycache__/
+>>>>>>> 2b385c6ddb640e27b8f9436f35a8accbcb60233a
