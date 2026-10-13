@@ -2,7 +2,7 @@ const USER_ID = 2;  // provisional hasta que haya login
 
 document.getElementById('boton-sos').addEventListener('click', async () => {
     try {
-        const respuesta = await fetch('/alerta', {
+        const respuesta = await fetch('/api/sos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: USER_ID })

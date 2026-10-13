@@ -10,16 +10,14 @@ app = Flask(__name__)
 
 # Configuración de SQLite (creará el archivo app_salud.db localmente)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'app_salud.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'app_salud.db') #configura la base de datos SQLite
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False #desactiva el seguimiento de modificaciones para mejorar el rendimiento
 
-db.init_app(app)
+db.init_app(app) #conecta la base de datos con la aplicación Flask
 
 # Crear las tablas automáticamente al iniciar
-with app.app_context():
+with app.app_context(): 
     db.create_all()
-
-# --- EJEMPLOS DE RUTAS API ---
 
 @app.route('/api/usuarios', methods=['POST'])
 def crear_usuario():
@@ -49,10 +47,25 @@ def crear_alarma():
 
 @app.route('/api/sos', methods=['POST'])
 def activar_sos():
-    data = request.get_json()
-    alerta = AlertSOS(user_id=data.get('user_id'))
+    data = request.get_json(silent=True) or {}
+    user_id = data.get('user_id', 1)   # provisional hasta que haya login
+
+    # 1. Comprobar que el usuario existe
+    usuario = db.session.get(User, user_id)
+    if not usuario:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+
+    # 2. Evitar alertas duplicadas: si ya hay una activa, reutilizarla
+    existente = AlertSOS.query.filter_by(user_id=user_id, estado='ACTIVA').first()
+    if existente:
+        return jsonify({'mensaje': 'Ya existe una alerta SOS activa',
+                        'alerta_id': existente.id}), 200
+
+    # 3. Crear y guardar la alerta nueva
+    alerta = AlertSOS(user_id=user_id)
     db.session.add(alerta)
     db.session.commit()
+    print("ALERTA SOS RECIBIDA:", alerta.id)
     return jsonify({'mensaje': 'Alerta SOS emitida', 'alerta_id': alerta.id}), 201
 
 # Ruta principal: Muestra la pantalla del paciente (El botón SOS de Laura)
@@ -62,7 +75,7 @@ def inicio():
     try:
         return render_template('paciente.html')
     except:
-        return "<h1>Servidor Flask funcionando</h1><p>Aquí se cargará el HTML de Laura (paciente.html) cuando te lo entregue.</p>"
+        return "<h1>Error al cargar la página del paciente</h1>"
 
 # Ruta secundaria: Muestra la pantalla del supervisor (El panel de Sofía)
 @app.route('/supervisor')
@@ -71,17 +84,7 @@ def supervisor():
     try:
         return render_template('supervisor.html')
     except:
-        return "<h1>Panel de Supervisor</h1><p>Aquí se cargará el HTML de Sofía (supervisor.html) cuando te lo entregue.</p>"
-
-@app.route('/alerta', methods=['POST'])
-def recibir_alerta():
-    data = request.get_json(silent=True) or {}
-    user_id = data.get('user_id', 1)   # provisional hasta que haya login
-    alerta = AlertSOS(user_id=user_id)
-    db.session.add(alerta)
-    db.session.commit()
-    print("ALERTA RECIBIDA", alerta.id)
-    return jsonify({"status": "ok", "alerta_id": alerta.id}), 200
+        return "<h1>Error al cargar la página del supervisor</h1>"
 
 # Vincular un supervisor con un dependiente
 @app.route('/api/vinculos', methods=['POST'])
