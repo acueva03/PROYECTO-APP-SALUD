@@ -1,15 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 
-<script src="{{ url_for('static', filename='supervisor.js') }}" defer></script>
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>App Salud - Panel del Supervisor</title>
-
 <link rel="stylesheet" href="{{ url_for('static', filename='supervisor.css') }}">
+<script src="{{ url_for('static', filename='supervisor.js') }}" defer></script>
 </head>
 
 <body>
@@ -37,6 +34,13 @@ Sistema activo
 
 </header>
 
+<!-- AVISOS -->
+<div id="aviso-sonido" class="aviso-sonido">
+  <button id="btn-activar-sonido" type="button">🔔 Activar sonido de alertas</button>
+</div>
+<div id="aviso-conexion" class="aviso-conexion" role="alert" hidden>
+  ⚠ Sin conexión con el servidor: puede que no veas alertas nuevas.
+</div>
 
 <!-- CONTENIDO PRINCIPAL -->
 <main class="contenido">
@@ -150,7 +154,7 @@ En el futuro JavaScript podrá cambiar esta sección
 cuando llegue una alerta SOS.
 -->
 
-<div class="estado-alertas">
+<div class="estado-alertas" role="alert" aria-live="assertive">
 
 <div class="icono-correcto">
 ✓

@@ -2,6 +2,7 @@ import os
 import threading
 import time
 from datetime import datetime
+from datetime import timezone
 from flask import Flask, render_template, request, jsonify
 from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile
 
@@ -128,7 +129,7 @@ def alertas_activas(supervisor_id):
         for a in dep.alertas_sos:
             if a.estado == 'ACTIVA':
                 resultado.append({'alerta_id': a.id, 'dependiente': dep.nombre,
-                                  'fecha_hora': a.fecha_hora.isoformat()})
+                  'fecha_hora': a.fecha_hora.replace(tzinfo=timezone.utc).isoformat()})
     return jsonify(resultado)
 
 

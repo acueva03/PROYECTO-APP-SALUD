@@ -755,3 +755,21 @@ align-items: flex-start;
     background-color: #fff1f1;
     color: #d62828;
 }
+
+[hidden] { display: none !important; }
+
+.aviso-sonido, .aviso-conexion {
+    max-width: 1100px;
+    margin: 16px auto 0;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+}
+.aviso-sonido { background-color: #fff8e1; border: 1px solid #f0c36d; }
+.aviso-conexion { background-color: #fff1f1; border: 2px solid #d62828; color: #a71919; }
+.aviso-sonido button {
+    padding: 10px 18px; border: none; border-radius: 10px;
+    background-color: #1677a8; color: #fff; font-weight: bold; cursor: pointer;
+}

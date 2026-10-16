@@ -1,14 +1,21 @@
 const SUPERVISOR_ID = 1;  // provisional hasta que haya login
 const INTERVALO_MS = 3000;
+const TIMEOUT_MS = 2500;
+const FALLOS_PARA_AVISAR = 2;
 
-// Carga el archivo localmente desde tu servidor Flask
-const alarmaSonora = new Audio('/static/alarma.mp3'); 
+const alarmaSonora = new Audio('/static/alarma.mp3');
 alarmaSonora.loop = true;
 
 const bloque = document.querySelector('.estado-alertas');
 const contador = document.querySelector('.contador-alertas');
-const htmlTodoBien = bloque.innerHTML;  // guardamos el estado "todo bien" original
+const avisoSonido = document.getElementById('aviso-sonido');
+const btnSonido = document.getElementById('btn-activar-sonido');
+const avisoConexion = document.getElementById('aviso-conexion');
+const htmlTodoBien = bloque.innerHTML;
+
 let ultimoEstado = '';
+let hayAlertas = false;
+let fallosSeguidos = 0;
 
 function crearTarjetaAlerta(alerta) {
     const div = document.createElement('div');
@@ -29,59 +36,85 @@ function crearTarjetaAlerta(alerta) {
     return div;
 }
 
-
+// Solo pinta; el sonido se gestiona aparte en sincronizarSonido()
 function mostrarAlertas(alertas) {
     if (alertas.length === 0) {
         bloque.className = 'estado-alertas';
         bloque.innerHTML = htmlTodoBien;
         contador.textContent = '0 alertas';
         contador.classList.remove('con-alertas');
-        
-        // Apagar el pitido si se han atendido todas
-        alarmaSonora.pause();
-        alarmaSonora.currentTime = 0;
         return;
     }
-    
     bloque.className = 'estado-alertas alerta-activa';
     bloque.replaceChildren(...alertas.map(crearTarjetaAlerta));
     contador.textContent = alertas.length + (alertas.length === 1 ? ' alerta' : ' alertas');
     contador.classList.add('con-alertas');
-
-    // Disparar pitido acústico y capturar posible bloqueo del navegador (autoplay)
-    alarmaSonora.play().catch(error => console.warn('El navegador bloqueó el autoplay del sonido', error));
 }
 
-async function consultarAlertas() {
+// Se ejecuta en CADA consulta: si hay alertas y no suena, lo reintenta
+function sincronizarSonido() {
+    if (hayAlertas) {
+        if (alarmaSonora.paused) {
+            alarmaSonora.play()
+                .then(() => { avisoSonido.hidden = true; })
+                .catch(() => { avisoSonido.hidden = false; });
+        }
+    } else {
+        alarmaSonora.pause();
+        alarmaSonora.currentTime = 0;
+    }
+}
+
+btnSonido.addEventListener('click', async () => {
     try {
-        const respuesta = await fetch('/api/supervisores/' + SUPERVISOR_ID + '/alertas');
+        await alarmaSonora.play();      // el clic desbloquea el audio
+        alarmaSonora.pause();
+        alarmaSonora.currentTime = 0;
+        avisoSonido.hidden = true;
+    } catch (error) {
+        console.warn('No se pudo activar el sonido', error);
+    }
+    sincronizarSonido();                // si ya había alerta, vuelve a sonar
+});
+
+async function consultarAlertas() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+        const respuesta = await fetch('/api/supervisores/' + SUPERVISOR_ID + '/alertas',
+                                      { signal: controller.signal });
+        if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const alertas = await respuesta.json();
+
+        fallosSeguidos = 0;
+        avisoConexion.hidden = true;
+
         const estadoNuevo = JSON.stringify(alertas);
-        if (estadoNuevo !== ultimoEstado) {   // solo repintamos si algo cambió
+        if (estadoNuevo !== ultimoEstado) {
             ultimoEstado = estadoNuevo;
             mostrarAlertas(alertas);
         }
+        hayAlertas = alertas.length > 0;
+        sincronizarSonido();
     } catch (error) {
+        fallosSeguidos++;
         console.error('No se pudo consultar las alertas', error);
+        if (fallosSeguidos >= FALLOS_PARA_AVISAR) avisoConexion.hidden = false;
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
 async function atenderAlerta(id) {
-    await fetch('/api/alertas/' + id + '/atender', { method: 'POST' });
+    try {
+        const respuesta = await fetch('/api/alertas/' + id + '/atender', { method: 'POST' });
+        if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+    } catch (error) {
+        alert('No se pudo marcar la alerta como atendida. Inténtalo de nuevo.');
+        return;
+    }
     consultarAlertas();
 }
 
 consultarAlertas();
 setInterval(consultarAlertas, INTERVALO_MS);
-
-// Desbloquear el motor de audio con el primer clic en la página
-document.body.addEventListener('click', function desbloquearAudio() {
-    // Intentamos reproducir y pausar inmediatamente
-    alarmaSonora.play().then(() => {
-        alarmaSonora.pause();
-        alarmaSonora.currentTime = 0;
-    }).catch((error) => console.warn('Aún no se puede reproducir', error));
-    
-    // Eliminamos el listener para que solo se ejecute la primera vez
-    document.body.removeEventListener('click', desbloquearAudio);
-});
