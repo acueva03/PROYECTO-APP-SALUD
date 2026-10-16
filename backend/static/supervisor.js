@@ -118,3 +118,8 @@ async function atenderAlerta(id) {
 
 consultarAlertas();
 setInterval(consultarAlertas, INTERVALO_MS);
+
+window.addEventListener('beforeunload', (evento) => {
+    evento.preventDefault();
+    evento.returnValue = '';   // necesario para que Chrome muestre el diálogo
+});

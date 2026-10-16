@@ -13,6 +13,10 @@ app = Flask(__name__)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'app_salud.db') #configura la base de datos SQLite
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False #desactiva el seguimiento de modificaciones para mejorar el rendimiento
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'check_same_thread': False, 'timeout': 15}
+}
+
 
 db.init_app(app) #conecta la base de datos con la aplicación Flask
 
@@ -20,9 +24,21 @@ db.init_app(app) #conecta la base de datos con la aplicación Flask
 with app.app_context(): 
     db.create_all()
 
+def guardar_en_bd():
+    """Hace commit. Devuelve True si fue bien; si falla, deshace y devuelve False."""
+    try:
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print("ERROR de base de datos:", e)   # 3.2.2: se ve en la consola de Flask
+        return False
+
 @app.route('/api/usuarios', methods=['POST'])
 def crear_usuario():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+    if not data.get('nombre'):
+        return jsonify({'error': 'Falta el nombre'}), 400
     nuevo_usuario = User(
         nombre=data.get('nombre'),
         edad=data.get('edad'),
@@ -30,7 +46,8 @@ def crear_usuario():
         rol=data.get('rol', 'dependiente')
     )
     db.session.add(nuevo_usuario)
-    db.session.commit()
+    if not guardar_en_bd():
+        return jsonify({'error': 'No se pudo crear el usuario'}), 500
     return jsonify({'mensaje': 'Usuario creado con éxito', 'id': nuevo_usuario.id}), 201
 
 @app.route('/api/alarmas', methods=['POST'])
@@ -43,19 +60,22 @@ def crear_alarma():
         es_repetitiva=data.get('es_repetitiva', False)
     )
     db.session.add(nueva_alarma)
-    db.session.commit()
+    if not guardar_en_bd():
+        return jsonify({'error': 'No se pudo guardar la alarma'}), 500
     return jsonify({'mensaje': 'Alarma configurada con éxito'}), 201
 
 @app.route('/api/sos', methods=['POST'])
 def activar_sos():
     data = request.get_json(silent=True) or {}
-    user_id = data.get('user_id', 1)   # provisional hasta que haya login
-
-    # 1. Comprobar que el usuario existe
+    user_id = data.get('user_id')
+    if user_id is None:
+        return jsonify({'error': 'Falta user_id'}), 400
     usuario = db.session.get(User, user_id)
     if not usuario:
         return jsonify({'error': 'Usuario no encontrado'}), 404
-
+    if usuario.rol != 'dependiente':
+        return jsonify({'error': 'Solo un dependiente puede emitir un SOS'}), 400
+    
     # 2. Evitar alertas duplicadas: si ya hay una activa, reutilizarla
     existente = AlertSOS.query.filter_by(user_id=user_id, estado='ACTIVA').first()
     if existente:
@@ -65,7 +85,8 @@ def activar_sos():
     # 3. Crear y guardar la alerta nueva
     alerta = AlertSOS(user_id=user_id)
     db.session.add(alerta)
-    db.session.commit()
+    if not guardar_en_bd():
+        return jsonify({'error': 'Error interno'}), 500
     print("ALERTA SOS RECIBIDA:", alerta.id)
     return jsonify({'mensaje': 'Alerta SOS emitida', 'alerta_id': alerta.id}), 201
 
@@ -90,14 +111,15 @@ def supervisor():
 # Vincular un supervisor con un dependiente
 @app.route('/api/vinculos', methods=['POST'])
 def vincular():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     supervisor = db.session.get(User, data.get('supervisor_id'))
     dependiente = db.session.get(User, data.get('dependiente_id'))
     if not supervisor or not dependiente:
         return jsonify({'error': 'Usuario no encontrado'}), 404
     if dependiente not in supervisor.dependientes:
         supervisor.dependientes.append(dependiente)
-        db.session.commit()
+        if not guardar_en_bd():
+            return jsonify({'error': 'No se pudo crear el vínculo'}), 500
     return jsonify({'mensaje': 'Vínculo creado'}), 201
 
 
@@ -107,14 +129,15 @@ def guardar_ficha(user_id):
     usuario = db.session.get(User, user_id)
     if not usuario:
         return jsonify({'error': 'Usuario no encontrado'}), 404
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     ficha = usuario.ficha_medica or MedicalProfile(user_id=user_id)
     for campo in ('grupo_sanguineo', 'alergias', 'enfermedades_cronicas', 'medicacion',
                   'contacto_emergencia_nombre', 'contacto_emergencia_telefono'):
         if campo in data:
             setattr(ficha, campo, data[campo])
     db.session.add(ficha)
-    db.session.commit()
+    if not guardar_en_bd():
+        return jsonify({'error': 'No se pudo guardar la ficha médica'}), 500
     return jsonify({'mensaje': 'Ficha médica guardada'}), 200
 
 
@@ -140,7 +163,8 @@ def atender_alerta(alerta_id):
     if not alerta:
         return jsonify({'error': 'Alerta no encontrada'}), 404
     alerta.estado = 'ATENDIDA'
-    db.session.commit()
+    if not guardar_en_bd():
+        return jsonify({'error': 'No se pudo marcar la alerta como atendida'}), 500
     return jsonify({'mensaje': 'Alerta atendida'}), 200
 
 @app.route('/api/usuarios/<int:user_id>', methods=['GET'])
@@ -165,14 +189,14 @@ def cambiar_estado_alarma(alarma_id):
     if not alarma:
         return jsonify({'error': 'Alarma no encontrada'}), 404
 
-    data = request.get_json() or {}
-    # Si el frontend envía {"activa": false}, se asigna; si no envía nada, invierte el valor actual
+    data = request.get_json(silent=True) or {}
     if 'activa' in data:
         alarma.activa = bool(data['activa'])
     else:
         alarma.activa = not alarma.activa
 
-    db.session.commit()
+    if not guardar_en_bd():
+        return jsonify({'error': 'No se pudo cambiar el estado de la alarma'}), 500
     return jsonify({
         'mensaje': 'Estado de alarma actualizado',
         'alarma_id': alarma.id,
