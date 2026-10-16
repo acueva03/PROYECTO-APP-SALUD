@@ -4,3 +4,9 @@ venv/
 instance/
 *.db
 __pycache__/
+*.db
+*.db.antes_de_restaurar
+backups/
+__pycache__/
+*.pyc
+.venv/
