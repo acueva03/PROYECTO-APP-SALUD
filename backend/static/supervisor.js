@@ -1,6 +1,10 @@
 const SUPERVISOR_ID = 1;  // provisional hasta que haya login
 const INTERVALO_MS = 3000;
 
+// Carga el archivo localmente desde tu servidor Flask
+const alarmaSonora = new Audio('/static/alarma.mp3'); 
+alarmaSonora.loop = true;
+
 const bloque = document.querySelector('.estado-alertas');
 const contador = document.querySelector('.contador-alertas');
 const htmlTodoBien = bloque.innerHTML;  // guardamos el estado "todo bien" original
@@ -25,18 +29,27 @@ function crearTarjetaAlerta(alerta) {
     return div;
 }
 
+
 function mostrarAlertas(alertas) {
     if (alertas.length === 0) {
         bloque.className = 'estado-alertas';
         bloque.innerHTML = htmlTodoBien;
         contador.textContent = '0 alertas';
         contador.classList.remove('con-alertas');
+        
+        // Apagar el pitido si se han atendido todas
+        alarmaSonora.pause();
+        alarmaSonora.currentTime = 0;
         return;
     }
+    
     bloque.className = 'estado-alertas alerta-activa';
     bloque.replaceChildren(...alertas.map(crearTarjetaAlerta));
     contador.textContent = alertas.length + (alertas.length === 1 ? ' alerta' : ' alertas');
     contador.classList.add('con-alertas');
+
+    // Disparar pitido acústico y capturar posible bloqueo del navegador (autoplay)
+    alarmaSonora.play().catch(error => console.warn('El navegador bloqueó el autoplay del sonido', error));
 }
 
 async function consultarAlertas() {
@@ -60,3 +73,15 @@ async function atenderAlerta(id) {
 
 consultarAlertas();
 setInterval(consultarAlertas, INTERVALO_MS);
+
+// Desbloquear el motor de audio con el primer clic en la página
+document.body.addEventListener('click', function desbloquearAudio() {
+    // Intentamos reproducir y pausar inmediatamente
+    alarmaSonora.play().then(() => {
+        alarmaSonora.pause();
+        alarmaSonora.currentTime = 0;
+    }).catch((error) => console.warn('Aún no se puede reproducir', error));
+    
+    // Eliminamos el listener para que solo se ejecute la primera vez
+    document.body.removeEventListener('click', desbloquearAudio);
+});
