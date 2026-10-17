@@ -53,6 +53,21 @@ def crear_usuario():
 @app.route('/api/alarmas', methods=['POST'])
 def crear_alarma():
     data = request.get_json()
+
+    # Comprobamos que la hora tiene formato HH:MM real (00:00 a 23:59).
+    # strptime lanza ValueError si no encaja, y así evitamos alarmas que nunca suenan.
+    # Importante: exigimos 5 caracteres para rechazar "8:30" (el JS compara texto exacto).
+    hora = data.get('hora') or ''
+    try:
+        datetime.strptime(hora, '%H:%M')
+        if len(hora) != 5:
+            raise ValueError
+    except ValueError:
+        return jsonify({'error': 'La hora debe tener formato HH:MM (ej. 08:30)'}), 400
+
+    if not data.get('titulo') or data.get('user_id') is None:
+        return jsonify({'error': 'Faltan titulo o user_id'}), 400
+
     nueva_alarma = Alarm(
         user_id=data.get('user_id'),
         titulo=data.get('titulo'),
@@ -63,6 +78,23 @@ def crear_alarma():
     if not guardar_en_bd():
         return jsonify({'error': 'No se pudo guardar la alarma'}), 500
     return jsonify({'mensaje': 'Alarma configurada con éxito'}), 201
+
+# Devuelve las alarmas ACTIVAS de un usuario.
+# La página del paciente llama a esta ruta para saber a qué horas debe avisar.
+@app.route('/api/usuarios/<int:user_id>/alarmas', methods=['GET'])
+def listar_alarmas(user_id):
+    usuario = db.session.get(User, user_id)
+    if not usuario:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    return jsonify([
+        {
+            'id': a.id,
+            'titulo': a.titulo,
+            'hora': a.hora,                      # texto "HH:MM"
+            'es_repetitiva': a.es_repetitiva
+        }
+        for a in usuario.alarmas if a.activa
+    ])
 
 @app.route('/api/sos', methods=['POST'])
 def activar_sos():
