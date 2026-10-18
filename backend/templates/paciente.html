@@ -69,6 +69,8 @@
             <input id="alarma-titulo" type="text" maxlength="100" required
                    placeholder="Ej: Tomar la pastilla">
 
+            <label for="alarma-fecha">Fecha</label>
+            <input id="alarma-fecha" type="date" required>                   
             <label for="alarma-hora">Hora</label>
             <input id="alarma-hora" type="time" required>
 
@@ -83,6 +85,9 @@
 
         <h3>Alarmas activas</h3>
         <ul id="lista-alarmas" class="lista-alarmas"></ul>
+        
+        <h3>Ya sonaron o desactivadas</h3>
+        <ul id="lista-inactivas" class="lista-alarmas"></ul>
     </section>
 
     <!-- PIE DE PÁGINA -->

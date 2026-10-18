@@ -1,11 +1,9 @@
 import os
 import threading
 import time
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from flask import Flask, render_template, request, jsonify
-from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile
-
+from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, ahora
 # Inicializamos la aplicación Flask
 app = Flask(__name__)
 
@@ -34,6 +32,51 @@ def guardar_en_bd():
         print("ERROR de base de datos:", e)   # 3.2.2: se ve en la consola de Flask
         return False
 
+# ---------- Ayudas para las alarmas ----------
+
+def hora_valida(texto):
+    """True si texto es una hora real con formato HH:MM de 5 caracteres (ej. 08:30, no 8:30)."""
+    try:
+        datetime.strptime(texto, '%H:%M')
+    except (ValueError, TypeError):
+        return False
+    return len(texto) == 5
+
+
+def fecha_valida(texto):
+    """True si texto es una fecha real con formato AAAA-MM-DD de 10 caracteres (ej. 2026-10-17)."""
+    try:
+        datetime.strptime(texto, '%Y-%m-%d')
+    except (ValueError, TypeError):
+        return False
+    return len(texto) == 10
+
+
+def siguiente_fecha(fecha_local, hora_local, hora_alarma):
+    """Próxima fecha en la que debe sonar una alarma REPETITIVA que acaba de sonar.
+    - Si ya ha pasado la hora de la alarma hoy -> mañana.
+    - Si todavía no (alarma perdida de un día anterior que suena tarde) -> hoy.
+    """
+    dia = datetime.strptime(fecha_local, '%Y-%m-%d').date()
+    if hora_alarma <= hora_local:
+        dia += timedelta(days=1)
+    return dia.isoformat()
+
+
+def alarma_a_dict(a):
+    """Cómo se envía una alarma al navegador."""
+    return {
+        'id': a.id,
+        'titulo': a.titulo,
+        'hora': a.hora,                          # texto "HH:MM"
+        'fecha': a.fecha,                        # texto "AAAA-MM-DD": próxima vez que suena
+        'es_repetitiva': a.es_repetitiva,
+        'activa': a.activa,
+        # UTC con zona horaria (igual que las alertas SOS); None si todavía no ha sonado
+        'ultima_vez_sono': (a.ultima_vez_sono.replace(tzinfo=timezone.utc).isoformat()
+                            if a.ultima_vez_sono else None)
+    }
+
 @app.route('/api/usuarios', methods=['POST'])
 def crear_usuario():
     data = request.get_json(silent=True) or {}
@@ -52,33 +95,39 @@ def crear_usuario():
 
 @app.route('/api/alarmas', methods=['POST'])
 def crear_alarma():
-    data = request.get_json()
+    # silent=True: si el cuerpo no es JSON devuelve None en vez de lanzar un error raro
+    data = request.get_json(silent=True) or {}
 
-    # Comprobamos que la hora tiene formato HH:MM real (00:00 a 23:59).
-    # strptime lanza ValueError si no encaja, y así evitamos alarmas que nunca suenan.
-    # Importante: exigimos 5 caracteres para rechazar "8:30" (el JS compara texto exacto).
-    hora = data.get('hora') or ''
-    try:
-        datetime.strptime(hora, '%H:%M')
-        if len(hora) != 5:
-            raise ValueError
-    except ValueError:
+    # Hora HH:MM real (00:00 a 23:59) y de 5 caracteres: rechaza "8:30"
+    if not hora_valida(data.get('hora')):
         return jsonify({'error': 'La hora debe tener formato HH:MM (ej. 08:30)'}), 400
 
-    if not data.get('titulo') or data.get('user_id') is None:
+    # NUEVO: fecha exacta en la que debe sonar (en una repetitiva, el primer día)
+    if not fecha_valida(data.get('fecha')):
+        return jsonify({'error': 'La fecha debe tener formato AAAA-MM-DD (ej. 2026-10-17)'}), 400
+
+    titulo = (data.get('titulo') or '').strip()
+    if not titulo or data.get('user_id') is None:
         return jsonify({'error': 'Faltan titulo o user_id'}), 400
+    if len(titulo) > 100:
+        return jsonify({'error': 'El título no puede pasar de 100 caracteres'}), 400
+
+    # NUEVO: SQLite no obliga a que el user_id exista, así que lo comprobamos nosotros
+    if not db.session.get(User, data.get('user_id')):
+        return jsonify({'error': 'Usuario no encontrado'}), 404
 
     nueva_alarma = Alarm(
         user_id=data.get('user_id'),
-        titulo=data.get('titulo'),
+        titulo=titulo,
         hora=data.get('hora'),
-        es_repetitiva=data.get('es_repetitiva', False)
+        fecha=data.get('fecha'),
+        es_repetitiva=bool(data.get('es_repetitiva', False))
     )
     db.session.add(nueva_alarma)
     if not guardar_en_bd():
         return jsonify({'error': 'No se pudo guardar la alarma'}), 500
-    return jsonify({'mensaje': 'Alarma configurada con éxito'}), 201
-
+    return jsonify({'mensaje': 'Alarma configurada con éxito',
+                    'alarma': alarma_a_dict(nueva_alarma)}), 201
 # Devuelve las alarmas ACTIVAS de un usuario.
 # La página del paciente llama a esta ruta para saber a qué horas debe avisar.
 @app.route('/api/usuarios/<int:user_id>/alarmas', methods=['GET'])
@@ -86,15 +135,11 @@ def listar_alarmas(user_id):
     usuario = db.session.get(User, user_id)
     if not usuario:
         return jsonify({'error': 'Usuario no encontrado'}), 404
-    return jsonify([
-        {
-            'id': a.id,
-            'titulo': a.titulo,
-            'hora': a.hora,                      # texto "HH:MM"
-            'es_repetitiva': a.es_repetitiva
-        }
-        for a in usuario.alarmas if a.activa
-    ])
+    # Por defecto solo las activas. Con ?todas=1 también las desactivadas y las que ya sonaron.
+    incluir_todas = request.args.get('todas') == '1'
+    alarmas = [a for a in usuario.alarmas if incluir_todas or a.activa]
+    alarmas.sort(key=lambda a: ((a.fecha or ''), a.hora))   # por fecha y luego por hora
+    return jsonify([alarma_a_dict(a) for a in alarmas])
 
 @app.route('/api/sos', methods=['POST'])
 def activar_sos():
@@ -222,10 +267,17 @@ def cambiar_estado_alarma(alarma_id):
         return jsonify({'error': 'Alarma no encontrada'}), 404
 
     data = request.get_json(silent=True) or {}
+
+    # NUEVO: al reactivar se puede enviar la nueva fecha. Validamos ANTES de tocar nada.
+    if 'fecha' in data and not fecha_valida(data['fecha']):
+        return jsonify({'error': 'La fecha debe tener formato AAAA-MM-DD (ej. 2026-10-17)'}), 400
+
     if 'activa' in data:
         alarma.activa = bool(data['activa'])
     else:
         alarma.activa = not alarma.activa
+    if 'fecha' in data:
+        alarma.fecha = data['fecha']
 
     if not guardar_en_bd():
         return jsonify({'error': 'No se pudo cambiar el estado de la alarma'}), 500
@@ -234,6 +286,34 @@ def cambiar_estado_alarma(alarma_id):
         'alarma_id': alarma.id,
         'activa': alarma.activa
     }), 200
+
+
+# NUEVO: el navegador avisa aquí cuando una alarma acaba de sonar.
+# Así "ya sonó" queda guardado en la base de datos y no se pierde al cerrar la pestaña.
+@app.route('/api/alarmas/<int:alarma_id>/sonada', methods=['POST'])
+def alarma_sonada(alarma_id):
+    alarma = db.session.get(Alarm, alarma_id)
+    if not alarma:
+        return jsonify({'error': 'Alarma no encontrada'}), 404
+
+    data = request.get_json(silent=True) or {}
+    fecha_local = data.get('fecha_local')
+    hora_local = data.get('hora_local')
+    if not fecha_valida(fecha_local) or not hora_valida(hora_local):
+        return jsonify({'error': 'Faltan fecha_local (AAAA-MM-DD) y hora_local (HH:MM)'}), 400
+
+    alarma.ultima_vez_sono = ahora()
+    if alarma.es_repetitiva:
+        # Sigue activa: pasa a sonar la próxima vez (normalmente mañana a la misma hora)
+        alarma.fecha = siguiente_fecha(fecha_local, hora_local, alarma.hora)
+    else:
+        # De un solo uso: se desactiva, pero queda guardada con su fecha y su "ultima_vez_sono"
+        alarma.activa = False
+
+    if not guardar_en_bd():
+        return jsonify({'error': 'No se pudo registrar que la alarma sonó'}), 500
+    return jsonify({'mensaje': 'Alarma registrada como sonada',
+                    'alarma': alarma_a_dict(alarma)}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

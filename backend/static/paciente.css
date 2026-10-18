@@ -290,6 +290,7 @@ body {
 
 /* Campos grandes para que sean fáciles de pulsar y de leer */
 .form-alarma input[type="text"],
+.form-alarma input[type="date"],
 .form-alarma input[type="time"] {
     padding: 0.75rem;
     font-size: 1.2rem;

@@ -78,10 +78,13 @@ class Alarm(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     titulo = db.Column(db.String(100), nullable=False)  # ej: "Beber agua"
-    hora = db.Column(db.String(5), nullable=False)      # Formato HH:MM
+    hora = db.Column(db.String(5), nullable=False)      # Formato HH:MM (hora local del paciente)
+    # Fecha (AAAA-MM-DD, local) de la PRÓXIMA vez que debe sonar. Si es repetitiva, avanza sola cada vez que suena.
+    fecha = db.Column(db.String(10), nullable=True)
     es_repetitiva = db.Column(db.Boolean, default=False)
     activa = db.Column(db.Boolean, default=True)
-
+    # Cuando sonó por última vez (UTC). None = todavía no ha sonado nunca.
+    ultima_vez_sono = db.Column(db.DateTime, nullable=True)
 # Alerta SOS, guarda la fecha/hora y su estado: activa o atendida
 class AlertSOS(db.Model):
     __tablename__ = 'alerts_sos'
