@@ -13,6 +13,39 @@ const btnSonido = document.getElementById('btn-activar-sonido');
 const avisoConexion = document.getElementById('aviso-conexion');
 const htmlTodoBien = bloque.innerHTML;
 
+const estadoSistema = document.getElementById('estado-sistema');
+const puntoSistema = document.getElementById('punto-sistema');
+const textoSistema = document.getElementById('texto-sistema');
+const ultimaComprobacion = document.getElementById('ultima-comprobacion');
+const estadoPaciente = document.getElementById('estado-paciente');
+const iconoEstado = document.getElementById('icono-estado');
+
+function horaAhora() {
+    return new Date().toLocaleTimeString('es-ES',
+        { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function marcarConexion(ok) {
+    estadoSistema.classList.toggle('sin-conexion', !ok);
+    puntoSistema.classList.toggle('rojo', !ok);
+    textoSistema.textContent = ok ? 'Conectado al servidor' : 'Sin conexión con el servidor';
+}
+
+function actualizarEstado(numAlertas) {
+    if (numAlertas > 0) {
+        estadoPaciente.textContent = '¡Alerta SOS activa!';
+        iconoEstado.textContent = '⚠';
+    } else {
+        estadoPaciente.textContent = 'Sin alertas activas';
+        iconoEstado.textContent = '✓';
+    }
+}
+
+// Saludo según la hora del día
+const hora = new Date().getHours();
+document.getElementById('saludo').textContent =
+    hora < 13 ? 'Buenos días' : (hora < 21 ? 'Buenas tardes' : 'Buenas noches');
+
 let ultimoEstado = '';
 let hayAlertas = false;
 let fallosSeguidos = 0;
@@ -94,12 +127,25 @@ async function consultarAlertas() {
             ultimoEstado = estadoNuevo;
             mostrarAlertas(alertas);
         }
+
+        // Indicadores reales (después de mostrarAlertas, que puede recrear el bloque)
+        marcarConexion(true);
+        actualizarEstado(alertas.length);
+        ultimaComprobacion.textContent = horaAhora();
+        const revision = document.getElementById('ultima-revision');
+        if (revision) revision.textContent = 'Última revisión: ' + horaAhora();
+
         hayAlertas = alertas.length > 0;
         sincronizarSonido();
     } catch (error) {
         fallosSeguidos++;
         console.error('No se pudo consultar las alertas', error);
-        if (fallosSeguidos >= FALLOS_PARA_AVISAR) avisoConexion.hidden = false;
+        if (fallosSeguidos >= FALLOS_PARA_AVISAR) {
+            avisoConexion.hidden = false;
+            marcarConexion(false);
+            estadoPaciente.textContent = 'Desconocido (sin conexión)';
+            iconoEstado.textContent = '?';
+        }
     } finally {
         clearTimeout(timeoutId);
     }

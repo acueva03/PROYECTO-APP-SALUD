@@ -773,3 +773,15 @@ align-items: flex-start;
     padding: 10px 18px; border: none; border-radius: 10px;
     background-color: #1677a8; color: #fff; font-weight: bold; cursor: pointer;
 }
+
+.estado-sistema.sin-conexion {
+    background-color: #fff1f1;
+    color: #a71919;
+}
+
+.punto-verde.rojo {
+    background-color: #d62828;
+}
+
+.alerta-activa h3,
+.alerta-activa p { color: #a71919; }

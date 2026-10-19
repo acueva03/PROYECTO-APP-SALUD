@@ -37,9 +37,22 @@ const textoAlarma = document.getElementById('texto-alarma');
 const btnEntendido = document.getElementById('btn-alarma-entendida');
 const avisoSonidoAlarma = document.getElementById('aviso-sonido-alarma');
 const btnSonidoAlarma = document.getElementById('btn-activar-sonido-alarma');
+const estadoSistema = document.querySelector('.estado-sistema');
+const puntoEstado = document.getElementById('punto-estado');
+const textoEstado = document.getElementById('texto-estado');
+
+// Pinta el indicador de conexión según el resultado de hablar con el servidor
+function marcarConexion(ok) {
+    estadoSistema.classList.toggle('sin-conexion', !ok);
+    puntoEstado.classList.remove('gris');
+    puntoEstado.classList.toggle('verde', ok);
+    puntoEstado.classList.toggle('rojo', !ok);
+    textoEstado.textContent = ok ? 'Sistema activo' : 'Sin conexión con el servidor';
+}
 
 let alarmas = [];                          // alarmas ACTIVAS: última lista conocida (si falla la red, seguimos con ella)
 let alarmasInactivas = [];                 // desactivadas o de un solo uso que ya sonaron (solo para enseñarlas en la lista)
+let alarmasCargadasUnaVez = false;         // para distinguir "no tengo alarmas" de "no pude cargarlas"
 // Claves "id|fecha|hora" que ya han sonado en ESTA sesión. Es solo un freno de seguridad para no repetir el aviso
 // mientras el servidor confirma; lo que de verdad recuerda "ya sonó" (aunque cierres la app) es la base de datos.
 const yaDisparadas = new Set();
@@ -92,16 +105,22 @@ async function cargarAlarmas() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_ALARMAS_MS);
     try {
-        // ?todas=1: el servidor devuelve también las desactivadas, para poder verlas y reactivarlas
         const respuesta = await fetch('/api/usuarios/' + USER_ID + '/alarmas?todas=1',
                                       { signal: controller.signal });
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const todas = await respuesta.json();
-        alarmas = todas.filter(a => a.activa);              // solo estas pueden sonar
+        alarmas = todas.filter(a => a.activa);
         alarmasInactivas = todas.filter(a => !a.activa);
-        mostrarListaAlarmas();   // refresca las listas visibles
+        alarmasCargadasUnaVez = true;
+        marcarConexion(true);
+        mostrarListaAlarmas();
     } catch (error) {
         console.error('No se pudieron cargar las alarmas (se usa la última lista)', error);
+        marcarConexion(false);
+        // Si nunca se cargaron, las listas saldrían vacías y parecería que no hay alarmas
+        if (!alarmasCargadasUnaVez) {
+            listaAlarmas.replaceChildren(crearItemVacio('No se pudieron cargar tus alarmas. Reintentando…'));
+        }
     } finally {
         clearTimeout(timeoutId);
     }
@@ -123,18 +142,19 @@ async function desactivarAlarma(id) {
 
 // Avisa al servidor de que una alarma acaba de sonar, para que lo GUARDE en la base de datos.
 // El servidor decide qué pasa después: si es repetitiva pasa a la fecha siguiente; si no, se desactiva.
-async function registrarSonada(alarma) {
+async function registrarSonada(alarma, fechaLocal, horaLocal, intento = 1) {
     try {
-        const respuesta = await fetch('/api/alarmas/' + alarma.id + '/sonada', {
+        const r = await fetch('/api/alarmas/' + alarma.id + '/sonada', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fecha_local: fechaActual(), hora_local: horaActual() })
+            body: JSON.stringify({ fecha_local: fechaLocal, hora_local: horaLocal })
         });
-        if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
-        await cargarAlarmas();   // recargamos para tener la nueva fecha / el nuevo estado
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        await cargarAlarmas();
     } catch (error) {
-        // Si falla, la alarma sigue "pendiente" en la BD: al reabrir la app volverá a avisar.
-        console.error('No se pudo registrar que la alarma sonó', alarma.id, error);
+        if (intento < 10) {
+            setTimeout(() => registrarSonada(alarma, fechaLocal, horaLocal, intento + 1), 5000 * intento);
+        }
     }
 }
 
@@ -199,7 +219,7 @@ function comprobarAlarmas() {
 
         // Lo guardamos en la base de datos. El servidor mueve la repetitiva a su siguiente fecha o
         // desactiva la de un solo uso, y al recargar la lista desaparece de las pendientes.
-        registrarSonada(alarma);
+        registrarSonada(alarma, fechaActual(), horaActual());
     }
 }
 

@@ -246,6 +246,19 @@ body {
     background-color: #2E7D32;
 }
 
+.punto-estado.rojo {
+    background-color: #B71C1C;
+}
+
+.punto-estado.gris {
+    background-color: #94A3B8;
+}
+
+.estado-sistema.sin-conexion {
+    background-color: #FDECEA;
+    color: #B71C1C;
+}
+
 .pie-asistencia {
     background-color: #E2E8F0;
     padding: 1rem;

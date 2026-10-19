@@ -25,9 +25,9 @@
 </div>
 </div>
 
-<div class="estado-sistema">
-<span class="punto-verde"></span>
-Sistema activo
+<div class="estado-sistema" id="estado-sistema">
+<span class="punto-verde" id="punto-sistema"></span>
+<span id="texto-sistema">Comprobando conexión…</span>
 </div>
 
 </div>
@@ -51,7 +51,7 @@ Sistema activo
 <div>
 <p class="saludo-pequeno">PANEL DEL SUPERVISOR</p>
 
-<h2>Buenos días, Alberto <span>👋</span></h2>
+<h2><span id="saludo">Hola</span>, Alberto <span>👋</span></h2>
 
 <p>
 Consulta aquí el estado de tu familiar
@@ -71,11 +71,6 @@ y sus alertas.
 <p class="etiqueta">PACIENTE SUPERVISADO</p>
 <h2>Información del paciente</h2>
 </div>
-
-<span class="estado-conectado">
-<span class="punto-verde"></span>
-Conectada
-</span>
 
 </div>
 
@@ -102,26 +97,19 @@ Paciente supervisada
 <div class="datos-extra">
 
 <div class="dato">
-
 <span class="icono">🕐</span>
-
 <div>
-<span>Última conexión</span>
-<strong>Hoy, 20:15</strong>
+<span>Última comprobación del servidor</span>
+<strong id="ultima-comprobacion">—</strong>
 </div>
-
 </div>
-
 
 <div class="dato">
-
-<span class="icono">✓</span>
-
+<span class="icono" id="icono-estado">…</span>
 <div>
 <span>Estado</span>
-<strong>Todo correcto</strong>
+<strong id="estado-paciente">Comprobando…</strong>
 </div>
-
 </div>
 
 </div>
