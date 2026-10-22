@@ -785,3 +785,24 @@ align-items: flex-start;
 
 .alerta-activa h3,
 .alerta-activa p { color: #a71919; }
+
+.contador-tomas {
+    background-color: #edf8f1;
+    color: #27734a;
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+}
+.contador-tomas.con-pendientes { background-color: #fff8e1; color: #8a5a00; }
+
+.lista-tomas { list-style: none; }
+.lista-tomas li {
+    padding: 12px 0;
+    border-bottom: 1px solid #edf1f3;
+    font-size: 15px;
+    color: #344d59;
+}
+.lista-tomas li:last-child { border-bottom: none; }
+.lista-tomas .toma-tarde { color: #a71919; font-weight: bold; }  /* más de 15 min sin confirmar */
+.lista-tomas .lista-vacia { color: #27734a; text-align: center; }

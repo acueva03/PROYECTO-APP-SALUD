@@ -165,6 +165,43 @@ async function atenderAlerta(id) {
 consultarAlertas();
 setInterval(consultarAlertas, INTERVALO_MS);
 
+// ---------- Recordatorios sin confirmar ----------
+const INTERVALO_TOMAS_MS = 15000;
+const MINUTOS_PARA_AVISO_ROJO = 15;
+const listaTomas = document.getElementById('lista-tomas');
+const contadorTomas = document.getElementById('contador-tomas');
+
+async function consultarTomas() {
+    try {
+        const respuesta = await fetch('/api/supervisores/' + SUPERVISOR_ID + '/tomas');
+        if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+        const tomas = await respuesta.json();
+
+        listaTomas.replaceChildren();
+        if (tomas.length === 0) {
+            const vacio = document.createElement('li');
+            vacio.className = 'lista-vacia';
+            vacio.textContent = 'Todo confirmado: no hay recordatorios pendientes.';
+            listaTomas.append(vacio);
+        }
+        for (const t of tomas) {
+            const minutos = Math.floor((Date.now() - new Date(t.creado).getTime()) / 60000);
+            const li = document.createElement('li');
+            li.textContent = t.dependiente + ' · ' + t.titulo + ' (prevista a las ' +
+                             t.hora_prevista + ', sin confirmar desde hace ' + minutos + ' min)';
+            if (minutos >= MINUTOS_PARA_AVISO_ROJO) li.classList.add('toma-tarde');
+            listaTomas.append(li);
+        }
+        contadorTomas.textContent = tomas.length + (tomas.length === 1 ? ' pendiente' : ' pendientes');
+        contadorTomas.classList.toggle('con-pendientes', tomas.length > 0);
+    } catch (error) {
+        console.error('No se pudieron consultar los recordatorios', error);
+    }
+}
+
+consultarTomas();
+setInterval(consultarTomas, INTERVALO_TOMAS_MS);
+
 window.addEventListener('beforeunload', (evento) => {
     evento.preventDefault();
     evento.returnValue = '';   // necesario para que Chrome muestre el diálogo

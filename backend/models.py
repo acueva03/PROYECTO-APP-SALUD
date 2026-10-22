@@ -93,3 +93,17 @@ class AlertSOS(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     fecha_hora = db.Column(db.DateTime, default=ahora)  # CAMBIO
     estado = db.Column(db.String(20), default='ACTIVA')  # 'ACTIVA' o 'ATENDIDA'
+
+    # Cada vez que suena una alarma se crea un registro; sirve para saber si se confirmó la toma
+class RegistroToma(db.Model):
+    __tablename__ = 'registros_toma'
+
+    id = db.Column(db.Integer, primary_key=True)
+    alarma_id = db.Column(db.Integer, db.ForeignKey('alarms.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    titulo = db.Column(db.String(100), nullable=False)     # copia del título de la alarma
+    fecha_prevista = db.Column(db.String(10), nullable=False)  # AAAA-MM-DD
+    hora_prevista = db.Column(db.String(5), nullable=False)    # HH:MM
+    estado = db.Column(db.String(20), default='PENDIENTE')     # 'PENDIENTE' o 'CONFIRMADA'
+    creado = db.Column(db.DateTime, default=ahora)             # UTC
+    confirmada_en = db.Column(db.DateTime, nullable=True)      # UTC

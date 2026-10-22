@@ -35,6 +35,7 @@ sonidoAlarma.loop = true;                 // suena en bucle hasta que el pacient
 const avisoAlarma = document.getElementById('aviso-alarma');
 const textoAlarma = document.getElementById('texto-alarma');
 const btnEntendido = document.getElementById('btn-alarma-entendida');
+const btnPosponer = document.getElementById('btn-alarma-posponer');
 const avisoSonidoAlarma = document.getElementById('aviso-sonido-alarma');
 const btnSonidoAlarma = document.getElementById('btn-activar-sonido-alarma');
 const estadoSistema = document.querySelector('.estado-sistema');
@@ -56,7 +57,8 @@ let alarmasCargadasUnaVez = false;         // para distinguir "no tengo alarmas"
 // Claves "id|fecha|hora" que ya han sonado en ESTA sesión. Es solo un freno de seguridad para no repetir el aviso
 // mientras el servidor confirma; lo que de verdad recuerda "ya sonó" (aunque cierres la app) es la base de datos.
 const yaDisparadas = new Set();
-let titulosEnPantalla = [];                // alarmas que están sonando ahora mismo (puede haber varias a la vez)
+let avisosEnPantalla = [];                 // avisos que suenan ahora: { texto, registroId, confirmarAlLlegar }
+const POSPONER_MS = 10 * 60 * 1000;        // 10 minutos
 
 // --- Utilidades de tiempo --------------------------------------------------
 
@@ -130,31 +132,85 @@ async function cargarAlarmas() {
 // Reutiliza la ruta PATCH /api/alarmas/<id>/estado que ya existía.
 async function desactivarAlarma(id) {
     try {
-        await fetch('/api/alarmas/' + id + '/estado', {
+        const r = await fetch('/api/alarmas/' + id + '/estado', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ activa: false })
         });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return true;
     } catch (error) {
         console.error('No se pudo desactivar la alarma', id, error);
+        mostrarMensajeAlarma('No se pudo quitar la alarma. Inténtalo de nuevo.', true);
+        return false;
     }
 }
 
 // Avisa al servidor de que una alarma acaba de sonar, para que lo GUARDE en la base de datos.
 // El servidor decide qué pasa después: si es repetitiva pasa a la fecha siguiente; si no, se desactiva.
-async function registrarSonada(alarma, fechaLocal, horaLocal, intento = 1) {
+// Avisa al servidor de que la alarma sonó. Él crea el registro de toma y nos devuelve su id.
+async function registrarSonada(alarma, fechaLocal, horaLocal, aviso, intento = 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_ALARMAS_MS * 2);
     try {
         const r = await fetch('/api/alarmas/' + alarma.id + '/sonada', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fecha_local: fechaLocal, hora_local: horaLocal })
+            body: JSON.stringify({
+                fecha_local: fechaLocal,
+                hora_local: horaLocal,
+                fecha_prevista: alarma.fecha      // la fecha que tenía la alarma al sonar
+            }),
+            signal: controller.signal
         });
         if (!r.ok) throw new Error('HTTP ' + r.status);
+        const datos = await r.json();
+
+        aviso.registroId = datos.registro_id;
+        // Si la paciente ya pulsó "Ya lo hice" antes de que llegara la respuesta, confirmamos ahora
+        if (aviso.confirmarAlLlegar) confirmarToma(aviso.registroId);
         await cargarAlarmas();
     } catch (error) {
         if (intento < 10) {
-            setTimeout(() => registrarSonada(alarma, fechaLocal, horaLocal, intento + 1), 5000 * intento);
+            setTimeout(() => registrarSonada(alarma, fechaLocal, horaLocal, aviso, intento + 1),
+                       5000 * intento);
         }
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+// Marca la toma como confirmada en el servidor
+async function confirmarToma(registroId) {
+    try {
+        const r = await fetch('/api/tomas/' + registroId + '/confirmar', { method: 'POST' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+    } catch (error) {
+        console.error('No se pudo confirmar la toma', registroId, error);
+    }
+}
+
+// Al abrir la página: recupera las tomas que quedaron sin confirmar (por ejemplo, tras recargar)
+async function cargarTomasPendientes() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_ALARMAS_MS);
+    try {
+        const r = await fetch('/api/usuarios/' + USER_ID + '/tomas-pendientes',
+                              { signal: controller.signal });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const tomas = await r.json();
+        for (const t of tomas) {
+            const cuando = (t.fecha_prevista === fechaActual() ? '' : fechaLegible(t.fecha_prevista) + ' ') + t.hora_prevista;
+            mostrarAviso({
+                texto: t.titulo + ' (pendiente: era a las ' + cuando + ')',
+                registroId: t.toma_id,
+                confirmarAlLlegar: false
+            });
+        }
+    } catch (error) {
+        console.error('No se pudieron cargar las tomas pendientes', error);
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
@@ -177,24 +233,36 @@ async function reactivarAlarma(alarma) {
 
 // Muestra el aviso y hace sonar la alarma.
 // retrasoMin = minutos que han pasado desde su hora. Si es 2 o más, la app estaba cerrada y la alarma se perdió.
+// Pinta el aviso (puede haber varios a la vez) y hace sonar la alarma
+function mostrarAviso(aviso) {
+    avisosEnPantalla.push(aviso);
+    textoAlarma.textContent = avisosEnPantalla.map(a => a.texto).join(' · ');
+    avisoAlarma.hidden = false;
+
+    sonidoAlarma.play()
+        .then(() => { avisoSonidoAlarma.hidden = true; })
+        .catch(() => { avisoSonidoAlarma.hidden = false; });
+
+    if (navigator.vibrate) navigator.vibrate([500, 300, 500]);
+}
+
+// Oculta el aviso y para el sonido
+function detenerAviso() {
+    sonidoAlarma.pause();
+    sonidoAlarma.currentTime = 0;
+    if (navigator.vibrate) navigator.vibrate(0);
+    avisoAlarma.hidden = true;
+}
+
+// retrasoMin = minutos desde su hora. Si es 2 o más, la alarma se perdió. Devuelve el aviso creado.
 function dispararAlarma(alarma, retrasoMin) {
     let texto = alarma.titulo;
     if (retrasoMin >= 2) {
         texto += ' (perdida: era el ' + fechaLegible(alarma.fecha) + ' a las ' + alarma.hora + ')';
     }
-    titulosEnPantalla.push(texto);
-    // textContent (y no innerHTML) para que un título con caracteres raros no inyecte HTML.
-    textoAlarma.textContent = titulosEnPantalla.join(' · ');
-    avisoAlarma.hidden = false;
-
-    // Los navegadores bloquean el audio hasta que el usuario interactúa con la página.
-    // Si falla, mostramos el botón de "activar sonido"; el aviso visual se ve igualmente.
-    sonidoAlarma.play()
-        .then(() => { avisoSonidoAlarma.hidden = true; })
-        .catch(() => { avisoSonidoAlarma.hidden = false; });
-
-    // Vibración en móviles compatibles (ignorada si no existe).
-    if (navigator.vibrate) navigator.vibrate([500, 300, 500]);
+    const aviso = { texto: texto, registroId: null, confirmarAlLlegar: false };
+    mostrarAviso(aviso);
+    return aviso;
 }
 
 // Comprueba si alguna alarma toca AHORA. Se ejecuta cada segundo.
@@ -215,23 +283,33 @@ function comprobarAlarmas() {
         yaDisparadas.add(clave);
 
         const retrasoMin = Math.floor((ahoraMs - momento.getTime()) / 60000);
-        dispararAlarma(alarma, retrasoMin);
 
         // Lo guardamos en la base de datos. El servidor mueve la repetitiva a su siguiente fecha o
         // desactiva la de un solo uso, y al recargar la lista desaparece de las pendientes.
-        registrarSonada(alarma, fechaActual(), horaActual());
+        const aviso = dispararAlarma(alarma, retrasoMin);
+        registrarSonada(alarma, fechaActual(), horaActual(), aviso);
     }
 }
 
 // --- Botones ------------------------------------------------------------
 
 // "Entendido": el paciente confirma que ha visto el aviso y paramos el sonido.
+// "Ya lo hice": confirma las tomas y para el sonido
 btnEntendido.addEventListener('click', () => {
-    sonidoAlarma.pause();
-    sonidoAlarma.currentTime = 0;
-    if (navigator.vibrate) navigator.vibrate(0);
-    titulosEnPantalla = [];
-    avisoAlarma.hidden = true;
+    for (const aviso of avisosEnPantalla) {
+        if (aviso.registroId) confirmarToma(aviso.registroId);
+        else aviso.confirmarAlLlegar = true;   // el servidor aún no ha respondido: se confirma al llegar
+    }
+    avisosEnPantalla = [];
+    detenerAviso();
+});
+
+// "Posponer": para el sonido y vuelve a avisar en 10 minutos con los mismos avisos
+btnPosponer.addEventListener('click', () => {
+    const pospuestos = avisosEnPantalla;
+    avisosEnPantalla = [];
+    detenerAviso();
+    setTimeout(() => pospuestos.forEach(mostrarAviso), POSPONER_MS);
 });
 
 // El clic en este botón es la "interacción del usuario" que desbloquea el audio del navegador.
@@ -253,7 +331,8 @@ btnSonidoAlarma.addEventListener('click', async () => {
 
 cargarAlarmas();
 setInterval(cargarAlarmas, INTERVALO_RECARGA_MS);
-setInterval(comprobarAlarmas, INTERVALO_COMPROBACION_MS);
+// Primero mostramos las tomas pendientes y luego empezamos a vigilar la hora (evita avisos duplicados)
+cargarTomasPendientes().finally(() => setInterval(comprobarAlarmas, INTERVALO_COMPROBACION_MS));
 
 // PARTE 3: PANTALLA PARA CREAR Y VER ALARMAS
 const formAlarma = document.getElementById('form-alarma');

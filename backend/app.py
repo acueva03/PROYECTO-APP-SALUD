@@ -1,9 +1,10 @@
 import os
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from flask import Flask, render_template, request, jsonify
-from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, ahora
+from sqlalchemy import inspect, text
+from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma, ahora
 # Inicializamos la aplicación Flask
 app = Flask(__name__)
 
@@ -21,6 +22,21 @@ db.init_app(app) #conecta la base de datos con la aplicación Flask
 # Crear las tablas automáticamente al iniciar
 with app.app_context(): 
     db.create_all()
+
+def actualizar_columnas():
+    """db.create_all() no añade columnas a tablas que ya existen: lo hacemos a mano."""
+    columnas = {c['name'] for c in inspect(db.engine).get_columns('alarms')}
+    with db.engine.begin() as con:
+        if 'fecha' not in columnas:
+            con.execute(text('ALTER TABLE alarms ADD COLUMN fecha VARCHAR(10)'))
+        if 'ultima_vez_sono' not in columnas:
+            con.execute(text('ALTER TABLE alarms ADD COLUMN ultima_vez_sono DATETIME'))
+        # Las alarmas activas sin fecha nunca sonarían: les ponemos la de hoy
+        con.execute(text('UPDATE alarms SET fecha = :hoy WHERE fecha IS NULL AND activa = 1'),
+                    {'hoy': date.today().isoformat()})
+
+with app.app_context():
+    actualizar_columnas()
 
 def guardar_en_bd():
     """Hace commit. Devuelve True si fue bien; si falla, deshace y devuelve False."""
@@ -107,8 +123,13 @@ def crear_alarma():
         return jsonify({'error': 'La fecha debe tener formato AAAA-MM-DD (ej. 2026-10-17)'}), 400
 
     titulo = (data.get('titulo') or '').strip()
-    if not titulo or data.get('user_id') is None:
-        return jsonify({'error': 'Faltan titulo o user_id'}), 400
+    user_id = data.get('user_id')
+    if not titulo or not isinstance(user_id, int) or isinstance(user_id, bool):
+        return jsonify({'error': 'Faltan titulo o user_id (número)'}), 400
+
+    # Margen de un día por si el navegador y el servidor tienen zonas horarias distintas
+    if datetime.strptime(data['fecha'], '%Y-%m-%d').date() < date.today() - timedelta(days=1):
+        return jsonify({'error': 'La fecha no puede estar en el pasado'}), 400
     if len(titulo) > 100:
         return jsonify({'error': 'El título no puede pasar de 100 caracteres'}), 400
 
@@ -299,21 +320,88 @@ def alarma_sonada(alarma_id):
     data = request.get_json(silent=True) or {}
     fecha_local = data.get('fecha_local')
     hora_local = data.get('hora_local')
-    if not fecha_valida(fecha_local) or not hora_valida(hora_local):
-        return jsonify({'error': 'Faltan fecha_local (AAAA-MM-DD) y hora_local (HH:MM)'}), 400
+    fecha_prevista = data.get('fecha_prevista')   # la fecha que tenía la alarma cuando sonó
+    if not (fecha_valida(fecha_local) and hora_valida(hora_local) and fecha_valida(fecha_prevista)):
+        return jsonify({'error': 'Faltan fecha_local, hora_local y fecha_prevista'}), 400
 
-    alarma.ultima_vez_sono = ahora()
-    if alarma.es_repetitiva:
-        # Sigue activa: pasa a sonar la próxima vez (normalmente mañana a la misma hora)
-        alarma.fecha = siguiente_fecha(fecha_local, hora_local, alarma.hora)
-    else:
-        # De un solo uso: se desactiva, pero queda guardada con su fecha y su "ultima_vez_sono"
-        alarma.activa = False
+    # Si el navegador reintenta, reutilizamos el registro en vez de crear uno duplicado
+    registro = RegistroToma.query.filter_by(
+        alarma_id=alarma.id, fecha_prevista=fecha_prevista, hora_prevista=alarma.hora).first()
+    if not registro:
+        registro = RegistroToma(alarma_id=alarma.id, user_id=alarma.user_id, titulo=alarma.titulo,
+                                fecha_prevista=fecha_prevista, hora_prevista=alarma.hora)
+        db.session.add(registro)
+
+    # Solo movemos la alarma la primera vez (si ya se movió, un reintento no la vuelve a mover)
+    if alarma.activa and alarma.fecha == fecha_prevista:
+        alarma.ultima_vez_sono = ahora()
+        if alarma.es_repetitiva:
+            alarma.fecha = siguiente_fecha(fecha_local, hora_local, alarma.hora)
+        else:
+            alarma.activa = False
 
     if not guardar_en_bd():
         return jsonify({'error': 'No se pudo registrar que la alarma sonó'}), 500
     return jsonify({'mensaje': 'Alarma registrada como sonada',
+                    'registro_id': registro.id,
                     'alarma': alarma_a_dict(alarma)}), 200
+
+# ---------- Tomas / confirmaciones ----------
+
+def toma_a_dict(t):
+    return {
+        'toma_id': t.id,
+        'titulo': t.titulo,
+        'fecha_prevista': t.fecha_prevista,
+        'hora_prevista': t.hora_prevista,
+        'estado': t.estado,
+        'creado': t.creado.replace(tzinfo=timezone.utc).isoformat()
+    }
+
+
+def tomas_pendientes_de(user_id, horas):
+    """Tomas PENDIENTES de un usuario creadas en las últimas `horas` horas."""
+    limite = ahora() - timedelta(hours=horas)
+    tomas = RegistroToma.query.filter_by(user_id=user_id, estado='PENDIENTE') \
+                              .order_by(RegistroToma.id).all()
+    return [t for t in tomas if t.creado.replace(tzinfo=timezone.utc) >= limite]
+
+
+# La paciente confirma que ha hecho lo que decía la alarma ("Ya lo hice")
+@app.route('/api/tomas/<int:toma_id>/confirmar', methods=['POST'])
+def confirmar_toma(toma_id):
+    toma = db.session.get(RegistroToma, toma_id)
+    if not toma:
+        return jsonify({'error': 'Toma no encontrada'}), 404
+    if toma.estado != 'CONFIRMADA':
+        toma.estado = 'CONFIRMADA'
+        toma.confirmada_en = ahora()
+        if not guardar_en_bd():
+            return jsonify({'error': 'No se pudo confirmar la toma'}), 500
+    return jsonify({'mensaje': 'Toma confirmada'}), 200
+
+
+# Pendientes de la paciente (la página las pide al abrirse, por si se recargó)
+@app.route('/api/usuarios/<int:user_id>/tomas-pendientes', methods=['GET'])
+def tomas_pendientes(user_id):
+    if not db.session.get(User, user_id):
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    return jsonify([toma_a_dict(t) for t in tomas_pendientes_de(user_id, 6)])
+
+
+# Para el panel del supervisor: tomas sin confirmar de sus dependientes (últimas 24 h)
+@app.route('/api/supervisores/<int:supervisor_id>/tomas', methods=['GET'])
+def tomas_supervisor(supervisor_id):
+    supervisor = db.session.get(User, supervisor_id)
+    if not supervisor:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    resultado = []
+    for dep in supervisor.dependientes:
+        for t in tomas_pendientes_de(dep.id, 24):
+            d = toma_a_dict(t)
+            d['dependiente'] = dep.nombre
+            resultado.append(d)
+    return jsonify(resultado)
 
 if __name__ == '__main__':
     app.run(debug=True)

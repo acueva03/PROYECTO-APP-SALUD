@@ -134,13 +134,17 @@ Paciente supervisada
 </div>
 
 
-<!--
-ZONA PREPARADA PARA EL FUTURO SISTEMA DE ALERTAS
-
-Actualmente estática.
-En el futuro JavaScript podrá cambiar esta sección
-cuando llegue una alerta SOS.
--->
+<!-- RECORDATORIOS SIN CONFIRMAR -->
+<section class="tarjeta">
+<div class="titulo-seccion">
+<div>
+<p class="etiqueta">MEDICACIÓN Y RECORDATORIOS</p>
+<h2>Recordatorios sin confirmar</h2>
+</div>
+<span class="contador-tomas" id="contador-tomas">0 pendientes</span>
+</div>
+<ul id="lista-tomas" class="lista-tomas"></ul>
+</section>
 
 <div class="estado-alertas" role="alert" aria-live="assertive">
 

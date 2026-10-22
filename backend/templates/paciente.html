@@ -20,11 +20,12 @@
     </header>
 
      <!-- AVISO DE ALARMA: oculto hasta que llega la hora de una alarma (lo controla conexion.js) -->
-    <div id="aviso-alarma" class="aviso-alarma" role="alertdialog" aria-live="assertive" hidden>
-        <p class="aviso-alarma-icono" aria-hidden="true">⏰</p>
-        <p id="texto-alarma" class="aviso-alarma-texto"></p>
-        <button id="btn-alarma-entendida" class="btn-alarma-entendida" type="button">Entendido</button>
-    </div>
+   <div id="aviso-alarma" class="aviso-alarma" role="alertdialog" aria-live="assertive" hidden>
+    <p class="aviso-alarma-icono" aria-hidden="true">⏰</p>
+    <p id="texto-alarma" class="aviso-alarma-texto"></p>
+    <button id="btn-alarma-entendida" class="btn-alarma-entendida" type="button">✔ Ya lo hice</button>
+    <button id="btn-alarma-posponer" class="btn-alarma-posponer" type="button">Posponer 10 minutos</button>
+</div>
 
     <!-- El navegador bloquea el sonido hasta que el usuario toca la página; este botón lo desbloquea -->
     <div id="aviso-sonido-alarma" class="aviso-sonido-alarma">
