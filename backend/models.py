@@ -1,12 +1,13 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date, timezone
+# NUEVO: Importar herramientas de seguridad para cifrar contraseñas (Riesgo 3.5)
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
 # Fecha y hora actual
 def ahora(): 
     return datetime.now(timezone.utc)
-
 
 # Tabla intermedia para vincular Supervisores con Dependientes
 supervisor_dependiente = db.Table(
@@ -28,15 +29,24 @@ class User(db.Model):
     altura = db.Column(db.Float, nullable=True)           
     rol = db.Column(db.String(20), nullable=False)         
 
+    # NUEVO: Campo para la contraseña encriptada
+    password_hash = db.Column(db.String(256), nullable=True)
+
+    # NUEVO: Función para generar el hash de la contraseña
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    # NUEVO: Función para comprobar si la contraseña coincide
+    def check_password(self, password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
     # Relaciones
-    ficha_medica = db.relationship('MedicalProfile', backref='usuario', uselist=False,
-                                   cascade='all, delete-orphan')
-    alarmas = db.relationship('Alarm', backref='usuario', lazy=True,
-                              cascade='all, delete-orphan')
-    metricas = db.relationship('HealthMetric', backref='usuario', lazy=True,
-                               cascade='all, delete-orphan')
-    alertas_sos = db.relationship('AlertSOS', backref='usuario', lazy=True,
-                                  cascade='all, delete-orphan')
+    ficha_medica = db.relationship('MedicalProfile', backref='usuario', uselist=False, cascade='all, delete-orphan')
+    alarmas = db.relationship('Alarm', backref='usuario', lazy=True, cascade='all, delete-orphan')
+    metricas = db.relationship('HealthMetric', backref='usuario', lazy=True, cascade='all, delete-orphan')
+    alertas_sos = db.relationship('AlertSOS', backref='usuario', lazy=True, cascade='all, delete-orphan')
 
     # Vinculación entre usuarios (Supervisor -> Dependientes)
     dependientes = db.relationship(
@@ -47,11 +57,9 @@ class User(db.Model):
         backref='supervisores'
     )
 
-
 # Guarda la ficha médica de un usuario
 class MedicalProfile(db.Model):
     __tablename__ = 'medical_profiles'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     grupo_sanguineo = db.Column(db.String(5))
@@ -64,46 +72,41 @@ class MedicalProfile(db.Model):
 # Guarda las métricas diarias de un usuario (fecha, horas de sueño, estado de ánimo)
 class HealthMetric(db.Model):
     __tablename__ = 'health_metrics'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    fecha = db.Column(db.Date, default=date.today)      # CAMBIO
+    fecha = db.Column(db.Date, default=date.today)
     horas_sueno = db.Column(db.Float, nullable=True)
     estado_animo = db.Column(db.String(50), nullable=True)
 
 # Almacena los avisos y recordatorios de un usuario
 class Alarm(db.Model):
     __tablename__ = 'alarms'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    titulo = db.Column(db.String(100), nullable=False)  # ej: "Beber agua"
-    hora = db.Column(db.String(5), nullable=False)      # Formato HH:MM (hora local del paciente)
-    # Fecha (AAAA-MM-DD, local) de la PRÓXIMA vez que debe sonar. Si es repetitiva, avanza sola cada vez que suena.
+    titulo = db.Column(db.String(100), nullable=False)
+    hora = db.Column(db.String(5), nullable=False)
     fecha = db.Column(db.String(10), nullable=True)
     es_repetitiva = db.Column(db.Boolean, default=False)
     activa = db.Column(db.Boolean, default=True)
-    # Cuando sonó por última vez (UTC). None = todavía no ha sonado nunca.
     ultima_vez_sono = db.Column(db.DateTime, nullable=True)
+
 # Alerta SOS, guarda la fecha/hora y su estado: activa o atendida
 class AlertSOS(db.Model):
     __tablename__ = 'alerts_sos'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    fecha_hora = db.Column(db.DateTime, default=ahora)  # CAMBIO
-    estado = db.Column(db.String(20), default='ACTIVA')  # 'ACTIVA' o 'ATENDIDA'
+    fecha_hora = db.Column(db.DateTime, default=ahora)
+    estado = db.Column(db.String(20), default='ACTIVA')
 
-    # Cada vez que suena una alarma se crea un registro; sirve para saber si se confirmó la toma
+# Cada vez que suena una alarma se crea un registro
 class RegistroToma(db.Model):
     __tablename__ = 'registros_toma'
-
     id = db.Column(db.Integer, primary_key=True)
     alarma_id = db.Column(db.Integer, db.ForeignKey('alarms.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    titulo = db.Column(db.String(100), nullable=False)     # copia del título de la alarma
-    fecha_prevista = db.Column(db.String(10), nullable=False)  # AAAA-MM-DD
-    hora_prevista = db.Column(db.String(5), nullable=False)    # HH:MM
-    estado = db.Column(db.String(20), default='PENDIENTE')     # 'PENDIENTE' o 'CONFIRMADA'
-    creado = db.Column(db.DateTime, default=ahora)             # UTC
-    confirmada_en = db.Column(db.DateTime, nullable=True)      # UTC
+    titulo = db.Column(db.String(100), nullable=False)
+    fecha_prevista = db.Column(db.String(10), nullable=False)
+    hora_prevista = db.Column(db.String(5), nullable=False)
+    estado = db.Column(db.String(20), default='PENDIENTE')
+    creado = db.Column(db.DateTime, default=ahora)
+    confirmada_en = db.Column(db.DateTime, nullable=True)

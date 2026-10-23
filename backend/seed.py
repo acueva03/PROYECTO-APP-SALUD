@@ -5,6 +5,11 @@ with app.app_context():
     if User.query.count() == 0:
         alberto = User(nombre='Alberto', rol='supervisor')
         maria = User(nombre='María', apellidos='Rodríguez', edad=78, peso=62, rol='dependiente')
+        
+        # NUEVO: Asignar contraseñas (1234) para las pruebas
+        alberto.set_password('1234')
+        maria.set_password('1234')
+
         alberto.dependientes.append(maria)
         db.session.add_all([alberto, maria])
         db.session.commit()
@@ -18,6 +23,6 @@ with app.app_context():
             contacto_emergencia_telefono='600000000'
         ))
         db.session.commit()
-        print('Datos de prueba creados')
+        print('Datos de prueba creados (Contraseñas de Alberto y María: 1234)')
     else:
         print('La base de datos ya tiene usuarios; no se ha hecho nada')

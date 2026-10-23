@@ -1,4 +1,4 @@
-const SUPERVISOR_ID = 1;  // provisional hasta que haya login
+// NUEVO: La constante SUPERVISOR_ID ha sido eliminada por seguridad (Riesgo 3.5)
 const INTERVALO_MS = 3000;
 const TIMEOUT_MS = 2500;
 const FALLOS_PARA_AVISAR = 2;
@@ -21,8 +21,7 @@ const estadoPaciente = document.getElementById('estado-paciente');
 const iconoEstado = document.getElementById('icono-estado');
 
 function horaAhora() {
-    return new Date().toLocaleTimeString('es-ES',
-        { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 function marcarConexion(ok) {
@@ -41,10 +40,8 @@ function actualizarEstado(numAlertas) {
     }
 }
 
-// Saludo según la hora del día
 const hora = new Date().getHours();
-document.getElementById('saludo').textContent =
-    hora < 13 ? 'Buenos días' : (hora < 21 ? 'Buenas tardes' : 'Buenas noches');
+document.getElementById('saludo').textContent = hora < 13 ? 'Buenos días' : (hora < 21 ? 'Buenas tardes' : 'Buenas noches');
 
 let ultimoEstado = '';
 let hayAlertas = false;
@@ -52,24 +49,18 @@ let fallosSeguidos = 0;
 
 function crearTarjetaAlerta(alerta) {
     const div = document.createElement('div');
-
     const titulo = document.createElement('h3');
     titulo.textContent = '¡SOS de ' + alerta.dependiente + '!';
-
     const hora = document.createElement('p');
-    hora.textContent = 'Enviada a las ' + new Date(alerta.fecha_hora)
-        .toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-
+    hora.textContent = 'Enviada a las ' + new Date(alerta.fecha_hora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     const boton = document.createElement('button');
     boton.textContent = 'Marcar como atendida';
     boton.className = 'btn-atender';
     boton.addEventListener('click', () => atenderAlerta(alerta.alerta_id));
-
     div.append(titulo, hora, boton);
     return div;
 }
 
-// Solo pinta; el sonido se gestiona aparte en sincronizarSonido()
 function mostrarAlertas(alertas) {
     if (alertas.length === 0) {
         bloque.className = 'estado-alertas';
@@ -84,13 +75,10 @@ function mostrarAlertas(alertas) {
     contador.classList.add('con-alertas');
 }
 
-// Se ejecuta en CADA consulta: si hay alertas y no suena, lo reintenta
 function sincronizarSonido() {
     if (hayAlertas) {
         if (alarmaSonora.paused) {
-            alarmaSonora.play()
-                .then(() => { avisoSonido.hidden = true; })
-                .catch(() => { avisoSonido.hidden = false; });
+            alarmaSonora.play().then(() => { avisoSonido.hidden = true; }).catch(() => { avisoSonido.hidden = false; });
         }
     } else {
         alarmaSonora.pause();
@@ -100,22 +88,20 @@ function sincronizarSonido() {
 
 btnSonido.addEventListener('click', async () => {
     try {
-        await alarmaSonora.play();      // el clic desbloquea el audio
+        await alarmaSonora.play();      
         alarmaSonora.pause();
         alarmaSonora.currentTime = 0;
         avisoSonido.hidden = true;
-    } catch (error) {
-        console.warn('No se pudo activar el sonido', error);
-    }
-    sincronizarSonido();                // si ya había alerta, vuelve a sonar
+    } catch (error) {}
+    sincronizarSonido();                
 });
 
 async function consultarAlertas() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
-        const respuesta = await fetch('/api/supervisores/' + SUPERVISOR_ID + '/alertas',
-                                      { signal: controller.signal });
+        // NUEVO: Usamos la ruta /api/mis-alertas y quitamos el ID estático de la URL
+        const respuesta = await fetch('/api/mis-alertas', { signal: controller.signal });
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const alertas = await respuesta.json();
 
@@ -128,7 +114,6 @@ async function consultarAlertas() {
             mostrarAlertas(alertas);
         }
 
-        // Indicadores reales (después de mostrarAlertas, que puede recrear el bloque)
         marcarConexion(true);
         actualizarEstado(alertas.length);
         ultimaComprobacion.textContent = horaAhora();
@@ -139,7 +124,6 @@ async function consultarAlertas() {
         sincronizarSonido();
     } catch (error) {
         fallosSeguidos++;
-        console.error('No se pudo consultar las alertas', error);
         if (fallosSeguidos >= FALLOS_PARA_AVISAR) {
             avisoConexion.hidden = false;
             marcarConexion(false);
@@ -165,7 +149,6 @@ async function atenderAlerta(id) {
 consultarAlertas();
 setInterval(consultarAlertas, INTERVALO_MS);
 
-// ---------- Recordatorios sin confirmar ----------
 const INTERVALO_TOMAS_MS = 15000;
 const MINUTOS_PARA_AVISO_ROJO = 15;
 const listaTomas = document.getElementById('lista-tomas');
@@ -173,7 +156,8 @@ const contadorTomas = document.getElementById('contador-tomas');
 
 async function consultarTomas() {
     try {
-        const respuesta = await fetch('/api/supervisores/' + SUPERVISOR_ID + '/tomas');
+        // NUEVO: Usamos la ruta protegida por sesión en lugar de la que usaba ID numérico
+        const respuesta = await fetch('/api/mis-tomas-supervisadas');
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const tomas = await respuesta.json();
 
@@ -187,16 +171,13 @@ async function consultarTomas() {
         for (const t of tomas) {
             const minutos = Math.floor((Date.now() - new Date(t.creado).getTime()) / 60000);
             const li = document.createElement('li');
-            li.textContent = t.dependiente + ' · ' + t.titulo + ' (prevista a las ' +
-                             t.hora_prevista + ', sin confirmar desde hace ' + minutos + ' min)';
+            li.textContent = t.dependiente + ' · ' + t.titulo + ' (prevista a las ' + t.hora_prevista + ', sin confirmar desde hace ' + minutos + ' min)';
             if (minutos >= MINUTOS_PARA_AVISO_ROJO) li.classList.add('toma-tarde');
             listaTomas.append(li);
         }
         contadorTomas.textContent = tomas.length + (tomas.length === 1 ? ' pendiente' : ' pendientes');
         contadorTomas.classList.toggle('con-pendientes', tomas.length > 0);
-    } catch (error) {
-        console.error('No se pudieron consultar los recordatorios', error);
-    }
+    } catch (error) {}
 }
 
 consultarTomas();
@@ -204,5 +185,5 @@ setInterval(consultarTomas, INTERVALO_TOMAS_MS);
 
 window.addEventListener('beforeunload', (evento) => {
     evento.preventDefault();
-    evento.returnValue = '';   // necesario para que Chrome muestre el diálogo
+    evento.returnValue = '';   
 });
