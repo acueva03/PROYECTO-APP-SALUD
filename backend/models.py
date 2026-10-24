@@ -42,6 +42,19 @@ class User(db.Model):
             return False
         return check_password_hash(self.password_hash, password)
 
+    # NUEVO: Nombre y apellidos juntos, para mostrarlos en las pantallas
+    @property
+    def nombre_completo(self):
+        return f"{self.nombre} {self.apellidos or ''}".strip()
+
+    # NUEVO: Iniciales para el avatar (ej: María Rodríguez -> MR)
+    @property
+    def iniciales(self):
+        ini = self.nombre[0] if self.nombre else ''
+        if self.apellidos:
+            ini += self.apellidos[0]
+        return ini.upper()
+
     # Relaciones
     ficha_medica = db.relationship('MedicalProfile', backref='usuario', uselist=False, cascade='all, delete-orphan')
     alarmas = db.relationship('Alarm', backref='usuario', lazy=True, cascade='all, delete-orphan')

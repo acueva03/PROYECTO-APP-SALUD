@@ -112,19 +112,17 @@ def logout():
 def inicio():
     if 'user_id' not in session or session.get('rol') != 'dependiente':
         return redirect(url_for('login'))
-    try:
-        return render_template('paciente.html', nombre=session.get('nombre'))
-    except:
-        return "<h1>Error al cargar la página del paciente</h1>"
+    usuario = db.session.get(User, session['user_id'])
+    return render_template('paciente.html', usuario=usuario)
 
 @app.route('/supervisor')
 def supervisor():
     if 'user_id' not in session or session.get('rol') != 'supervisor':
         return redirect(url_for('login'))
-    try:
-        return render_template('supervisor.html', nombre=session.get('nombre'))
-    except:
-        return "<h1>Error al cargar la página del supervisor</h1>"
+    usuario = db.session.get(User, session['user_id'])
+    # De momento el panel muestra un solo paciente: el primero vinculado
+    paciente = usuario.dependientes[0] if usuario.dependientes else None
+    return render_template('supervisor.html', usuario=usuario, paciente=paciente)
 
 @app.route('/api/alarmas', methods=['POST'])
 def crear_alarma():

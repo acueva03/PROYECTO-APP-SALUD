@@ -51,7 +51,7 @@
 <div>
 <p class="saludo-pequeno">PANEL DEL SUPERVISOR</p>
 
-<h2><span id="saludo">Hola</span>, Alberto <span>👋</span></h2>
+<h2><span id="saludo">Hola</span>, {{ usuario.nombre }} <span>👋</span></h2>
 
 <p>
 Consulta aquí el estado de tu familiar
@@ -75,23 +75,19 @@ y sus alertas.
 </div>
 
 
+{% if paciente %}
 <div class="paciente-info">
-
-<div class="avatar">
-MR
+  <div class="avatar">{{ paciente.iniciales }}</div>
+  <div class="datos-paciente">
+    <h3>{{ paciente.nombre_completo }}</h3>
+    <p>
+      {% if paciente.edad %}{{ paciente.edad }} años · {% endif %}Paciente en supervisión
+    </p>
+  </div>
 </div>
-
-<div class="datos-paciente">
-
-<h3>María Rodríguez</h3>
-
-<p>
-Paciente supervisada
-</p>
-
-</div>
-
-</div>
+{% else %}
+<p>No tienes ningún paciente vinculado todavía.</p>
+{% endif %}
 
 
 <div class="datos-extra">
@@ -235,6 +231,8 @@ necesite asistencia.
 
 <!-- PIE DE PÁGINA -->
 <footer>
+  
+<a href="/logout">Cerrar sesión</a>
 
 <p>
 App Salud · Panel del Supervisor

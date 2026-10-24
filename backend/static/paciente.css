@@ -421,3 +421,10 @@ body {
         font-size: 1.3rem;
     }
 }
+
+.saludo-paciente {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--color-encabezado);
+    padding: 1rem 1rem 0;
+}

@@ -18,6 +18,7 @@
             <h1>App de Salud</h1>
         </div>
     </header>
+    <p class="saludo-paciente">Hola, {{ usuario.nombre }}</p>
 
      <!-- AVISO DE ALARMA: oculto hasta que llega la hora de una alarma (lo controla conexion.js) -->
    <div id="aviso-alarma" class="aviso-alarma" role="alertdialog" aria-live="assertive" hidden>
@@ -94,6 +95,7 @@
     <!-- PIE DE PÁGINA -->
     <footer class="pie-asistencia">
         <p>Al pulsar el botón, tu supervisor recibirá un aviso inmediato.</p>
+        <a href="/logout">Cerrar sesión</a>
     </footer>
 
     <!-- Lógica de conexión con el servidor (Andrés) -->
