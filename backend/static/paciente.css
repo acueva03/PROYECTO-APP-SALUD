@@ -1,87 +1,16 @@
 /* ==========================================================================
-   Variables de Diseño y Accesibilidad
+   PACIENTE: solo lo que es propio de esta pantalla.
+   Colores, cabecera, tarjetas y botones generales están en base.css
    ========================================================================== */
-:root {
-    --color-fondo: #F4F6F9;
-    --color-texto: #1A1A1A;
-    --color-encabezado: #0F2C59;
-    
-    /* Colores del Botón SOS (Alto contraste) */
-    --color-sos-base: #D32F2F;
-    --color-sos-hover: #B71C1C;
-    --color-sos-activo: #8E0000;
-    --color-sos-sombra: rgba(211, 47, 47, 0.4);
-    
-    /* Indicador de foco para accesibilidad por teclado */
-    --color-foco: #0288D1;
-    
-    --fuente-principal: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-}
 
-/* ==========================================================================
-   Estilos Generales
-   ========================================================================== */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    font-family: var(--fuente-principal);
-    background-color: var(--color-fondo);
-    color: var(--color-texto);
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    text-align: center;
-}
-
-/* ==========================================================================
-   Encabezado
-   ========================================================================== */
-.encabezado-asistencia {
-    background-color: var(--color-encabezado);
-    color: #FFFFFF;
-    padding: 1.25rem 1rem;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-}
-
-.contenedor-cabecera {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-}
-
-.icono-asistencia {
-    font-size: 1.8rem;
-}
-
-.encabezado-asistencia h1 {
-    font-size: 1.6rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-/* ==========================================================================
-   Área Principal y Botón SOS
-   ========================================================================== */
-.contenedor-principal {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 1rem;
-}
-
+/* ---------- Botón SOS ---------- */
 .seccion-sos {
-    max-width: 550px;
-    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
+    text-align: center;
+    padding: 2rem 1rem;
 }
 
 .instruccion-sos {
@@ -98,15 +27,14 @@ body {
     padding: 1rem;
 }
 
-/* Diseño del Botón SOS Accesible y Destacado */
 .btn-sos {
     width: 270px;
     height: 270px;
     border-radius: 50%;
-    background: radial-gradient(circle, #E53935 0%, var(--color-sos-base) 100%);
+    background: radial-gradient(circle, #E53935 0%, var(--color-peligro) 100%);
     color: #FFFFFF;
     border: 8px solid #FFFFFF;
-    box-shadow: 0 12px 28px var(--color-sos-sombra), 0 0 0 12px rgba(211, 47, 47, 0.15);
+    box-shadow: 0 12px 28px rgba(211, 47, 47, 0.4), 0 0 0 12px rgba(211, 47, 47, 0.15);
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -117,10 +45,7 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
-.icono-sos {
-    font-size: 3.2rem;
-    margin-bottom: 0.2rem;
-}
+.icono-sos { font-size: 3.2rem; margin-bottom: 0.2rem; }
 
 .texto-sos {
     font-size: 3.8rem;
@@ -140,38 +65,34 @@ body {
     border-radius: 12px;
 }
 
-/* Estados Interactivos */
 .btn-sos:hover {
-    background: var(--color-sos-hover);
+    background: var(--color-peligro-oscuro);
     transform: scale(1.04);
     box-shadow: 0 16px 36px rgba(183, 28, 28, 0.5), 0 0 0 16px rgba(211, 47, 47, 0.25);
 }
 
 .btn-sos:active {
-    background: var(--color-sos-activo);
+    background: #8E0000;
     transform: scale(0.96);
     box-shadow: 0 6px 16px rgba(142, 0, 0, 0.6);
 }
 
-/* Accesibilidad por teclado (Teclas Tab / Enter) */
 .btn-sos:focus-visible {
     outline: 6px solid var(--color-foco);
     outline-offset: 10px;
 }
 
-/* ==========================================================================
-   Aviso de alarma (lo muestra/oculta conexion.js con el atributo "hidden")
-   ========================================================================== */
+/* ---------- Aviso de alarma (lo muestra/oculta conexion.js con "hidden") ---------- */
 .aviso-alarma {
-    background-color: #FFF3CD;
-    border: 4px solid #F57C00;
-    color: #1A1A1A;
+    background-color: var(--color-aviso-fondo);
+    border-bottom: 4px solid var(--color-aviso);
     padding: 1.5rem 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.75rem;
-    animation: parpadeo-alarma 1s infinite;   /* llama la atención sin depender solo del sonido */
+    text-align: center;
+    animation: parpadeo 1s infinite;   /* llama la atención sin depender solo del sonido */
 }
 
 .aviso-alarma-icono { font-size: 3rem; }
@@ -181,159 +102,7 @@ body {
     font-weight: 800;
 }
 
-.btn-alarma-entendida {
-    padding: 1rem 2.5rem;
-    font-size: 1.4rem;
-    font-weight: 800;
-    background-color: #0F2C59;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.btn-alarma-entendida:focus-visible {
-    outline: 6px solid var(--color-foco);   /* misma accesibilidad por teclado que el SOS */
-    outline-offset: 4px;
-}
-
-.aviso-sonido-alarma {
-    background-color: #FFF8E1;
-    padding: 0.75rem;
-}
-
-.aviso-sonido-alarma button {
-    padding: 0.75rem 1.25rem;
-    border: none;
-    border-radius: 10px;
-    background-color: #0288D1;
-    color: #FFFFFF;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-@keyframes parpadeo-alarma {
-    50% { opacity: 0.7; }
-}
-
-/* Sin esto, "display: flex" anula el atributo hidden y el aviso se vería siempre */
-[hidden] { display: none !important; }
-
-.btn-alarma-posponer {
-    padding: 0.75rem 2rem;
-    font-size: 1.2rem;
-    font-weight: 700;
-    background-color: #FFFFFF;
-    color: #0F2C59;
-    border: 3px solid #0F2C59;
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.btn-alarma-posponer:focus-visible {
-    outline: 6px solid var(--color-foco);
-    outline-offset: 4px;
-}
-
-/* ==========================================================================
-   Indicador de Estado y Pie
-   ========================================================================== */
-.estado-sistema {
-    font-size: 1.15rem;
-    color: #334155;
-    background-color: #E2E8F0;
-    padding: 0.75rem 1.5rem;
-    border-radius: 20px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.punto-estado {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.punto-estado.verde {
-    background-color: #2E7D32;
-}
-
-.punto-estado.rojo {
-    background-color: #B71C1C;
-}
-
-.punto-estado.gris {
-    background-color: #94A3B8;
-}
-
-.estado-sistema.sin-conexion {
-    background-color: #FDECEA;
-    color: #B71C1C;
-}
-
-.pie-asistencia {
-    background-color: #E2E8F0;
-    padding: 1rem;
-    font-size: 1rem;
-    color: #475569;
-}
-
-/* ==========================================================================
-   Pantalla de alarmas: formulario + lista (lo controla conexion.js)
-   ========================================================================== */
-.seccion-alarmas {
-    max-width: 550px;
-    width: 100%;
-    margin: 0 auto 2rem;
-    padding: 1.5rem 1rem;
-    background-color: #FFFFFF;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.seccion-alarmas h2 {
-    color: var(--color-encabezado);
-    margin-bottom: 1rem;
-}
-
-.seccion-alarmas h3 {
-    margin: 1.5rem 0 0.5rem;
-    color: #2C3E50;
-}
-
-.form-alarma {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: left;
-}
-
-.form-alarma label {
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-/* Campos grandes para que sean fáciles de pulsar y de leer */
-.form-alarma input[type="text"],
-.form-alarma input[type="date"],
-.form-alarma input[type="time"] {
-    padding: 0.75rem;
-    font-size: 1.2rem;
-    border: 2px solid #94A3B8;
-    border-radius: 10px;
-}
-
-.form-alarma input:focus-visible,
-.btn-crear-alarma:focus-visible,
-.btn-quitar-alarma:focus-visible {
-    outline: 4px solid var(--color-foco);   /* misma accesibilidad por teclado que el SOS */
-    outline-offset: 2px;
-}
-
+/* ---------- Mis alarmas ---------- */
 .check-repetir {
     display: flex;
     align-items: center;
@@ -348,30 +117,14 @@ body {
 
 .btn-crear-alarma {
     margin-top: 0.5rem;
-    padding: 1rem;
-    font-size: 1.3rem;
-    font-weight: 800;
-    background-color: var(--color-encabezado);
-    color: #FFFFFF;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
+    font-size: 1.25rem;
 }
 
-.btn-crear-alarma:hover {
-    background-color: #0A1F40;
-}
-
-.mensaje-alarma {
-    font-weight: 700;
-    min-height: 1.4rem;   /* reserva el hueco para que la página no "salte" al aparecer el texto */
-}
-.mensaje-alarma.ok { color: #2E7D32; }
-.mensaje-alarma.error { color: #B71C1C; }
-
-.lista-alarmas {
-    list-style: none;
-    text-align: left;
+/* Campos grandes para que sean fáciles de pulsar y de leer */
+.form-alarma input[type="text"],
+.form-alarma input[type="date"],
+.form-alarma input[type="time"] {
+    font-size: 1.2rem;
 }
 
 .lista-alarmas li {
@@ -379,52 +132,28 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #E2E8F0;
     font-size: 1.15rem;
 }
 
-.lista-alarmas .lista-vacia {
-    justify-content: center;
-    color: #475569;
-}
+.lista-alarmas .lista-vacia { justify-content: center; }
 
+/* Botones que crea conexion.js (Quitar / Reactivar) */
 .btn-quitar-alarma {
     padding: 0.5rem 1rem;
+    font-family: inherit;
     font-size: 1rem;
     font-weight: 700;
     background-color: #FFFFFF;
-    color: #B71C1C;
-    border: 2px solid #B71C1C;
+    color: var(--color-peligro-oscuro);
+    border: 2px solid var(--color-peligro-oscuro);
     border-radius: 8px;
     cursor: pointer;
 }
 
-.btn-quitar-alarma:hover {
-    background-color: #FDECEA;
-}
+.btn-quitar-alarma:hover { background-color: var(--color-peligro-fondo); }
 
-/* ==========================================================================
-   Adaptación Responsive (Pantallas pequeñas y móviles)
-   ========================================================================== */
 @media (max-width: 480px) {
-    .btn-sos {
-        width: 230px;
-        height: 230px;
-    }
-
-    .texto-sos {
-        font-size: 3.2rem;
-    }
-
-    .instruccion-sos {
-        font-size: 1.3rem;
-    }
-}
-
-.saludo-paciente {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--color-encabezado);
-    padding: 1rem 1rem 0;
+    .btn-sos { width: 230px; height: 230px; }
+    .texto-sos { font-size: 3.2rem; }
+    .instruccion-sos { font-size: 1.3rem; }
 }

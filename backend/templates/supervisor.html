@@ -1,245 +1,129 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "base.html" %}
 
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>App Salud - Panel del Supervisor</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='supervisor.css') }}">
-<script src="{{ url_for('static', filename='supervisor.js') }}" defer></script>
-</head>
+{% block titulo %}App Salud - Panel del supervisor{% endblock %}
+{% block css %}<link rel="stylesheet" href="{{ url_for('static', filename='supervisor.css') }}">{% endblock %}
+{% block subtitulo %}Panel de supervisión{% endblock %}
 
-<body>
-
-<!-- CABECERA -->
-<header class="header">
-
-<div class="header-contenido">
-
-<div class="logo">
-<div class="logo-icono">♥</div>
-
-<div>
-<h1>App Salud</h1>
-<p>Panel de supervisión</p>
-</div>
-</div>
-
+<!-- Indicador de conexión en la cabecera (lo controla supervisor.js) -->
+{% block estado %}
 <div class="estado-sistema" id="estado-sistema">
-<span class="punto-verde" id="punto-sistema"></span>
-<span id="texto-sistema">Comprobando conexión…</span>
+    <span class="punto-estado verde" id="punto-sistema" aria-hidden="true"></span>
+    <span id="texto-sistema">Comprobando conexión…</span>
 </div>
+{% endblock %}
 
+{% block avisos %}
+<div id="aviso-sonido" class="banner banner-aviso">
+    <button id="btn-activar-sonido" class="btn btn-primario" type="button">🔔 Activar sonido de alertas</button>
 </div>
-
-</header>
-
-<!-- AVISOS -->
-<div id="aviso-sonido" class="aviso-sonido">
-  <button id="btn-activar-sonido" type="button">🔔 Activar sonido de alertas</button>
+<div id="aviso-conexion" class="banner banner-peligro" role="alert" hidden>
+    ⚠ Sin conexión con el servidor: puede que no veas alertas nuevas.
 </div>
-<div id="aviso-conexion" class="aviso-conexion" role="alert" hidden>
-  ⚠ Sin conexión con el servidor: puede que no veas alertas nuevas.
-</div>
+{% endblock %}
 
-<!-- CONTENIDO PRINCIPAL -->
-<main class="contenido">
-
+{% block contenido %}
 <!-- BIENVENIDA -->
 <section class="bienvenida">
-
-<div>
-<p class="saludo-pequeno">PANEL DEL SUPERVISOR</p>
-
-<h2><span id="saludo">Hola</span>, {{ usuario.nombre }} <span>👋</span></h2>
-
-<p>
-Consulta aquí el estado de tu familiar
-y sus alertas.
-</p>
-</div>
-
+    <h2><span id="saludo">Hola</span>, {{ usuario.nombre }} 👋</h2>
+    <p>Consulta aquí el estado de tu familiar y sus alertas.</p>
 </section>
-
 
 <!-- INFORMACIÓN DEL PACIENTE -->
-<section class="tarjeta paciente">
+<section class="tarjeta">
+    <div class="tarjeta-cabecera">
+        <h2>Paciente supervisado</h2>
+    </div>
 
-<div class="titulo-seccion">
+    {% if paciente %}
+    <div class="paciente-info">
+        <div class="avatar">{{ paciente.iniciales }}</div>
+        <div class="datos-paciente">
+            <h3>{{ paciente.nombre_completo }}</h3>
+            <p>{% if paciente.edad %}{{ paciente.edad }} años · {% endif %}Paciente en supervisión</p>
+        </div>
+    </div>
+    {% else %}
+    <p class="texto-suave sin-paciente">No tienes ningún paciente vinculado todavía.</p>
+    {% endif %}
 
-<div>
-<p class="etiqueta">PACIENTE SUPERVISADO</p>
-<h2>Información del paciente</h2>
-</div>
+    <!-- Estos elementos los rellena supervisor.js: deben existir siempre -->
+    <div class="datos-extra">
+        <div class="dato">
+            <span class="icono">🕐</span>
+            <div>
+                <span>Última comprobación del servidor</span>
+                <strong id="ultima-comprobacion">—</strong>
+            </div>
+        </div>
 
-</div>
-
-
-{% if paciente %}
-<div class="paciente-info">
-  <div class="avatar">{{ paciente.iniciales }}</div>
-  <div class="datos-paciente">
-    <h3>{{ paciente.nombre_completo }}</h3>
-    <p>
-      {% if paciente.edad %}{{ paciente.edad }} años · {% endif %}Paciente en supervisión
-    </p>
-  </div>
-</div>
-{% else %}
-<p>No tienes ningún paciente vinculado todavía.</p>
-{% endif %}
-
-
-<div class="datos-extra">
-
-<div class="dato">
-<span class="icono">🕐</span>
-<div>
-<span>Última comprobación del servidor</span>
-<strong id="ultima-comprobacion">—</strong>
-</div>
-</div>
-
-<div class="dato">
-<span class="icono" id="icono-estado">…</span>
-<div>
-<span>Estado</span>
-<strong id="estado-paciente">Comprobando…</strong>
-</div>
-</div>
-
-</div>
-
+        <div class="dato">
+            <span class="icono" id="icono-estado">…</span>
+            <div>
+                <span>Estado</span>
+                <strong id="estado-paciente">Comprobando…</strong>
+            </div>
+        </div>
+    </div>
 </section>
 
-
-<!-- ALERTAS -->
+<!-- ALERTAS SOS -->
 <section class="tarjeta">
+    <div class="tarjeta-cabecera">
+        <h2>Estado de las alertas</h2>
+        <span class="insignia contador-alertas">0 alertas</span>
+    </div>
 
-<div class="titulo-seccion">
-
-<div>
-<p class="etiqueta">SUPERVISIÓN</p>
-<h2>Estado de las alertas</h2>
-</div>
-
-<span class="contador-alertas">
-0 alertas
-</span>
-
-</div>
-
+    <!-- supervisor.js guarda este contenido y lo restaura cuando no hay alertas -->
+    <div class="estado-alertas" role="alert" aria-live="assertive">
+        <div class="icono-correcto">✓</div>
+        <h3>Todo está bien</h3>
+        <p>No hay alertas activas en este momento.</p>
+        <span class="ultima-revision">Última revisión: ahora</span>
+    </div>
+</section>
 
 <!-- RECORDATORIOS SIN CONFIRMAR -->
 <section class="tarjeta">
-<div class="titulo-seccion">
-<div>
-<p class="etiqueta">MEDICACIÓN Y RECORDATORIOS</p>
-<h2>Recordatorios sin confirmar</h2>
-</div>
-<span class="contador-tomas" id="contador-tomas">0 pendientes</span>
-</div>
-<ul id="lista-tomas" class="lista-tomas"></ul>
+    <div class="tarjeta-cabecera">
+        <h2>Recordatorios sin confirmar</h2>
+        <span class="insignia contador-tomas" id="contador-tomas">0 pendientes</span>
+    </div>
+    <ul id="lista-tomas" class="lista-tomas"></ul>
 </section>
-
-<div class="estado-alertas" role="alert" aria-live="assertive">
-
-<div class="icono-correcto">
-✓
-</div>
-
-<h3>Todo está bien</h3>
-
-<p>
-No hay alertas activas en este momento.
-</p>
-
-<span class="ultima-revision">
-Última revisión: ahora
-</span>
-
-</div>
-
-</section>
-
 
 <!-- ACTIVIDAD RECIENTE -->
 <section class="tarjeta">
+    <div class="tarjeta-cabecera">
+        <h2>Actividad reciente</h2>
+    </div>
 
-<div class="titulo-seccion">
+    <div class="actividad">
+        <div class="actividad-item">
+            <div class="actividad-icono conectado">✓</div>
+            <div class="actividad-texto">
+                <strong>{% if paciente %}{{ paciente.nombre }}: aplicación en funcionamiento{% else %}Sin paciente vinculado{% endif %}</strong>
+                <span>La aplicación está funcionando correctamente</span>
+            </div>
+        </div>
 
-<div>
-<p class="etiqueta">ACTIVIDAD</p>
-<h2>Actividad reciente</h2>
-</div>
-
-</div>
-
-
-<div class="actividad">
-
-<div class="actividad-item">
-
-<div class="actividad-icono conectado">
-✓
-</div>
-
-<div class="actividad-texto">
-<strong>Paciente conectada</strong>
-<span>La aplicación está funcionando correctamente</span>
-</div>
-
-<time>20:15</time>
-
-</div>
-
-
-<div class="actividad-item">
-
-<div class="actividad-icono sistema">
-●
-</div>
-
-<div class="actividad-texto">
-<strong>Sistema activo</strong>
-<span>Conexión establecida correctamente</span>
-</div>
-
-<time>20:10</time>
-
-</div>
-
-</div>
-
+        <div class="actividad-item">
+            <div class="actividad-icono sistema">●</div>
+            <div class="actividad-texto">
+                <strong>Sistema activo</strong>
+                <span>Conexión establecida correctamente</span>
+            </div>
+        </div>
+    </div>
 </section>
-
 
 <!-- AVISO INFORMATIVO -->
 <section class="aviso">
-
-<span class="aviso-icono">i</span>
-
-<p>
-Las alertas aparecerán aquí cuando el paciente
-necesite asistencia.
-</p>
-
+    <span class="aviso-icono">i</span>
+    <p>Las alertas aparecerán aquí cuando el paciente necesite asistencia.</p>
 </section>
 
-</main>
+{% endblock %}
 
-
-<!-- PIE DE PÁGINA -->
-<footer>
-  
-<a href="/logout">Cerrar sesión</a>
-
-<p>
-App Salud · Panel del Supervisor
-</p>
-
-</footer>
-
-</body>
-
-</html>
+{% block scripts %}
+<script src="{{ url_for('static', filename='supervisor.js') }}"></script>
+{% endblock %}

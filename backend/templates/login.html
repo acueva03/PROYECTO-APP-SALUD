@@ -1,37 +1,30 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - App Salud</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; background-color: #F4F6F9; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        h1 { color: #0F2C59; margin-bottom: 20px; font-size: 24px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
-        button { width: 100%; padding: 14px; background-color: #0F2C59; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        button:hover { background-color: #0A1F40; }
-        .error { color: #D32F2F; margin-bottom: 15px; font-weight: bold; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-    <div class="login-box">
-        <h1>Bienvenido a App Salud</h1>
-        
-        <!-- NUEVO: Formulario que envía un POST a la ruta /login en app.py -->
-        <form method="POST" action="/login">
-            {% if error %}
-                <p class="error">{{ error }}</p>
-            {% endif %}
-            
-            <input type="text" name="nombre" placeholder="Nombre (Ej: Alberto o María)" required>
-            <input type="password" name="password" placeholder="Contraseña (1234)" required>
-            
-            <button type="submit">Iniciar Sesión</button>
-        </form>
+{% block titulo %}Iniciar sesión - App Salud{% endblock %}
+{% block subtitulo %}Acceso a la aplicación{% endblock %}
+{% block clase_contenedor %}contenedor-estrecho{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta">
+    <div class="tarjeta-cabecera">
+        <h2>Iniciar sesión</h2>
     </div>
 
-</body>
-</html>
+    <!-- Envía un POST a la ruta /login de app.py -->
+    <form method="POST" action="/login" class="formulario">
+        {% if error %}
+            <p class="mensaje error" role="alert">{{ error }}</p>
+        {% endif %}
+
+        <label for="nombre">Nombre</label>
+        <input id="nombre" type="text" name="nombre" placeholder="Ej: Alberto o María" required autofocus>
+
+        <label for="password">Contraseña</label>
+        <input id="password" type="password" name="password" placeholder="Tu contraseña" required>
+
+        <button type="submit" class="btn btn-primario btn-ancho">Iniciar sesión</button>
+    </form>
+</section>
+{% endblock %}
+
+{% block pie %}App Salud{% endblock %}

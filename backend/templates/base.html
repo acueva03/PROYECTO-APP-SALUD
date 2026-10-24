@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}App Salud{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    {% block css %}{% endblock %}
+</head>
+<body>
+
+    <!-- CABECERA COMÚN A TODAS LAS PANTALLAS -->
+    <header class="encabezado">
+        <div class="encabezado-contenido">
+            <div class="marca">
+                <span class="marca-icono" aria-hidden="true">♥</span>
+                <div>
+                    <h1>App Salud</h1>
+                    <p>{% block subtitulo %}{% endblock %}</p>
+                </div>
+            </div>
+
+            <div class="encabezado-derecha">
+                {% block estado %}{% endblock %}
+                {% if usuario %}
+                    <span class="usuario-sesion">{{ usuario.nombre }}</span>
+                    <a class="enlace-salir" href="{{ url_for('logout') }}">Cerrar sesión</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    {% block avisos %}{% endblock %}
+
+    <main class="contenedor {% block clase_contenedor %}{% endblock %}">
+        {% block contenido %}{% endblock %}
+    </main>
+
+    <footer class="pie">
+        <p>{% block pie %}App Salud{% endblock %}</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

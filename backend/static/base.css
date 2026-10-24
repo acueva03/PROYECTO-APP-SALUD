@@ -1,0 +1,372 @@
+/* ==========================================================================
+   APP SALUD - ESTILOS COMUNES (login, paciente y supervisor)
+   Aquí vive la identidad visual. Si quieres cambiar un color o una
+   tipografía de TODA la app, se cambia solo en este bloque de variables.
+   ========================================================================== */
+:root {
+    /* Colores de marca */
+    --color-primario: #0F2C59;
+    --color-primario-hover: #0A1F40;
+    --color-primario-suave: #E8EEF8;
+
+    /* Superficies y texto */
+    --color-fondo: #F4F6F9;
+    --color-superficie: #FFFFFF;
+    --color-borde: #E2E8F0;
+    --color-texto: #1A1A1A;
+    --color-texto-suave: #475569;
+
+    /* Estados */
+    --color-ok: #2E7D32;
+    --color-ok-fondo: #E8F5E9;
+    --color-aviso: #F57C00;
+    --color-aviso-texto: #8A5A00;
+    --color-aviso-fondo: #FFF3CD;
+    --color-peligro: #D32F2F;
+    --color-peligro-oscuro: #B71C1C;
+    --color-peligro-fondo: #FDECEA;
+
+    /* Accesibilidad: anillo de foco con el teclado */
+    --color-foco: #0288D1;
+
+    /* Forma */
+    --radio-tarjeta: 16px;
+    --radio-boton: 12px;
+    --sombra-tarjeta: 0 4px 12px rgba(15, 44, 89, 0.08);
+
+    --fuente: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--fuente);
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.4;
+}
+
+/* Sin esto, "display: flex" anula el atributo hidden y los avisos se verían siempre */
+[hidden] { display: none !important; }
+
+:focus-visible {
+    outline: 4px solid var(--color-foco);
+    outline-offset: 3px;
+}
+
+/* ==========================================================================
+   Cabecera común
+   ========================================================================== */
+.encabezado {
+    background-color: var(--color-primario);
+    color: #FFFFFF;
+    padding: 0.9rem 1.25rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.encabezado-contenido {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.marca {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.marca-icono {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radio-boton);
+    background-color: rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.marca h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.marca p {
+    font-size: 0.9rem;
+    opacity: 0.85;
+}
+
+.encabezado-derecha {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.usuario-sesion {
+    font-weight: 600;
+}
+
+.enlace-salir {
+    color: #FFFFFF;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.4rem 0.9rem;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 10px;
+}
+
+.enlace-salir:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Indicador de conexión (lo actualizan conexion.js y supervisor.js) */
+.estado-sistema {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--color-borde);
+    color: #334155;
+    padding: 0.4rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.estado-sistema.sin-conexion {
+    background-color: var(--color-peligro-fondo);
+    color: var(--color-peligro-oscuro);
+}
+
+.punto-estado {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    background-color: #94A3B8;
+}
+
+.punto-estado.verde { background-color: var(--color-ok); }
+.punto-estado.rojo  { background-color: var(--color-peligro-oscuro); }
+.punto-estado.gris  { background-color: #94A3B8; }
+
+/* ==========================================================================
+   Contenido, bienvenida y tarjetas
+   ========================================================================== */
+.contenedor {
+    flex: 1;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
+}
+
+.contenedor-estrecho {
+    max-width: 440px;
+}
+
+.bienvenida {
+    margin-bottom: 1.25rem;
+}
+
+.bienvenida h2 {
+    font-size: 1.9rem;
+    color: var(--color-primario);
+    margin-bottom: 0.25rem;
+}
+
+.bienvenida p {
+    color: var(--color-texto-suave);
+    font-size: 1.05rem;
+}
+
+.tarjeta {
+    background-color: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-tarjeta);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--sombra-tarjeta);
+}
+
+.tarjeta-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.tarjeta h2 {
+    color: var(--color-primario);
+    font-size: 1.35rem;
+}
+
+.tarjeta h3 {
+    color: #2C3E50;
+    font-size: 1.1rem;
+    margin: 1.5rem 0 0.5rem;
+}
+
+.texto-suave {
+    color: var(--color-texto-suave);
+}
+
+/* Contadores (alertas, pendientes). JS les añade con-alertas / con-pendientes */
+.insignia {
+    background-color: var(--color-ok-fondo);
+    color: var(--color-ok);
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.insignia.con-alertas   { background-color: var(--color-peligro-fondo); color: var(--color-peligro-oscuro); }
+.insignia.con-pendientes { background-color: var(--color-aviso-fondo);   color: var(--color-aviso-texto); }
+
+/* ==========================================================================
+   Botones
+   ========================================================================== */
+.btn {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 800;
+    text-align: center;
+    border: 2px solid transparent;
+    border-radius: var(--radio-boton);
+    cursor: pointer;
+}
+
+.btn-primario {
+    background-color: var(--color-primario);
+    color: #FFFFFF;
+}
+.btn-primario:hover { background-color: var(--color-primario-hover); }
+
+.btn-secundario {
+    background-color: #FFFFFF;
+    color: var(--color-primario);
+    border-color: var(--color-primario);
+}
+.btn-secundario:hover { background-color: var(--color-primario-suave); }
+
+.btn-ancho  { width: 100%; }
+.btn-grande { font-size: 1.35rem; padding: 1rem 2.5rem; }
+
+/* ==========================================================================
+   Formularios
+   ========================================================================== */
+.formulario {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.formulario label {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="date"],
+input[type="time"] {
+    width: 100%;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 1.05rem;
+    border: 2px solid #94A3B8;
+    border-radius: 10px;
+    background-color: #FFFFFF;
+}
+
+.mensaje,
+.mensaje-alarma {
+    font-weight: 700;
+    min-height: 1.4rem;   /* reserva el hueco para que la página no "salte" */
+}
+
+.mensaje.ok,    .mensaje-alarma.ok    { color: var(--color-ok); }
+.mensaje.error, .mensaje-alarma.error { color: var(--color-peligro-oscuro); }
+
+/* ==========================================================================
+   Avisos de página completa (sonido, conexión...)
+   ========================================================================== */
+.banner {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    font-weight: 700;
+}
+
+.banner-aviso   { background-color: #FFF8E1; border-bottom: 1px solid #F0C36D; }
+.banner-peligro { background-color: var(--color-peligro-fondo); border-bottom: 2px solid var(--color-peligro); color: var(--color-peligro-oscuro); }
+
+/* ==========================================================================
+   Listas de filas (alarmas del paciente, recordatorios del supervisor)
+   ========================================================================== */
+.lista-alarmas,
+.lista-tomas {
+    list-style: none;
+}
+
+.lista-alarmas li,
+.lista-tomas li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.lista-alarmas li:last-child,
+.lista-tomas li:last-child {
+    border-bottom: none;
+}
+
+.lista-vacia {
+    color: var(--color-texto-suave);
+    text-align: center;
+}
+
+/* ==========================================================================
+   Pie de página y animación común
+   ========================================================================== */
+.pie {
+    background-color: var(--color-borde);
+    color: var(--color-texto-suave);
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.95rem;
+}
+
+@keyframes parpadeo {
+    50% { opacity: 0.65; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 480px) {
+    .bienvenida h2 { font-size: 1.6rem; }
+    .tarjeta { padding: 1.15rem; }
+    .tarjeta-cabecera { flex-direction: column; align-items: flex-start; }
+}
