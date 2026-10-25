@@ -79,6 +79,10 @@ def alarma_a_dict(a):
                             if a.ultima_vez_sono else None)
     }
 
+def usuario_actual():
+    user_id = session.get('user_id')
+    return db.session.get(User, user_id) if user_id else None
+
 # ---------------- NUEVO: RUTAS DE LOGIN ----------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -196,16 +200,31 @@ def alertas_activas():
 
 @app.route('/api/alertas/<int:alerta_id>/atender', methods=['POST'])
 def atender_alerta(alerta_id):
+    sup = usuario_actual()
+    if not sup: return jsonify({'error': 'No autorizado'}), 401
+    if sup.rol != 'supervisor': return jsonify({'error': 'Prohibido'}), 403
+
     alerta = db.session.get(AlertSOS, alerta_id)
     if not alerta: return jsonify({'error': 'Alerta no encontrada'}), 404
+    if alerta.usuario not in sup.dependientes:      # solo alertas de SUS dependientes
+        return jsonify({'error': 'Prohibido'}), 403
+
     alerta.estado = 'ATENDIDA'
     if not guardar_en_bd(): return jsonify({'error': 'No se pudo marcar la alerta'}), 500
     return jsonify({'mensaje': 'Alerta atendida'}), 200
 
 @app.route('/api/alarmas/<int:alarma_id>/estado', methods=['PATCH'])
 def cambiar_estado_alarma(alarma_id):
+    # NUEVO: hace falta sesión
+    user_id = session.get('user_id')
+    if not user_id: return jsonify({'error': 'No autorizado'}), 401
+
     alarma = db.session.get(Alarm, alarma_id)
     if not alarma: return jsonify({'error': 'Alarma no encontrada'}), 404
+
+    # NUEVO: la alarma tiene que ser del usuario que llama
+    if alarma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
+
     data = request.get_json(silent=True) or {}
     if 'fecha' in data and not fecha_valida(data['fecha']): return jsonify({'error': 'Fecha inválida'}), 400
     if 'activa' in data: alarma.activa = bool(data['activa'])
@@ -216,8 +235,16 @@ def cambiar_estado_alarma(alarma_id):
 
 @app.route('/api/alarmas/<int:alarma_id>/sonada', methods=['POST'])
 def alarma_sonada(alarma_id):
+    # NUEVO: hace falta sesión
+    user_id = session.get('user_id')
+    if not user_id: return jsonify({'error': 'No autorizado'}), 401
+
     alarma = db.session.get(Alarm, alarma_id)
     if not alarma: return jsonify({'error': 'Alarma no encontrada'}), 404
+
+    # NUEVO: la alarma tiene que ser del usuario que llama
+    if alarma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
+
     data = request.get_json(silent=True) or {}
     fecha_local, hora_local, fecha_prevista = data.get('fecha_local'), data.get('hora_local'), data.get('fecha_prevista')
     if not (fecha_valida(fecha_local) and hora_valida(hora_local) and fecha_valida(fecha_prevista)):
@@ -243,8 +270,16 @@ def tomas_pendientes_de(user_id, horas):
 
 @app.route('/api/tomas/<int:toma_id>/confirmar', methods=['POST'])
 def confirmar_toma(toma_id):
+    # NUEVO: hace falta sesión
+    user_id = session.get('user_id')
+    if not user_id: return jsonify({'error': 'No autorizado'}), 401
+
     toma = db.session.get(RegistroToma, toma_id)
     if not toma: return jsonify({'error': 'Toma no encontrada'}), 404
+
+    # NUEVO: la toma tiene que ser del usuario que llama
+    if toma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
+
     if toma.estado != 'CONFIRMADA':
         toma.estado = 'CONFIRMADA'
         toma.confirmada_en = ahora()
