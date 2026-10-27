@@ -1,4 +1,3 @@
-// NUEVO: La constante SUPERVISOR_ID ha sido eliminada por seguridad (Riesgo 3.5)
 const INTERVALO_MS = 3000;
 const TIMEOUT_MS = 2500;
 const FALLOS_PARA_AVISAR = 2;
@@ -100,7 +99,6 @@ async function consultarAlertas() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
-        // NUEVO: Usamos la ruta /api/mis-alertas y quitamos el ID estático de la URL
         const respuesta = await fetch('/api/mis-alertas', { signal: controller.signal });
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const alertas = await respuesta.json();
@@ -156,7 +154,6 @@ const contadorTomas = document.getElementById('contador-tomas');
 
 async function consultarTomas() {
     try {
-        // NUEVO: Usamos la ruta protegida por sesión en lugar de la que usaba ID numérico
         const respuesta = await fetch('/api/mis-tomas-supervisadas');
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const tomas = await respuesta.json();

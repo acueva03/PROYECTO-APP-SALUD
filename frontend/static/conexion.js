@@ -1,4 +1,3 @@
-// NUEVO: La constante USER_ID ha sido ELIMINADA para cumplir con la mitigación del Riesgo 3.5
 const botonSOS = document.getElementById('boton-sos');
 
 // PARTE 1: BOTON SOS
@@ -10,7 +9,6 @@ botonSOS.addEventListener('click', async () => {
     try {
         const respuesta = await fetch('/api/sos', {
             method: 'POST',
-            // NUEVO: Ya no enviamos el user_id, el servidor lo saca de la sesión segura
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}), 
             signal: controller.signal
@@ -83,7 +81,6 @@ async function cargarAlarmas() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_ALARMAS_MS);
     try {
-        // NUEVO: La ruta ya no tiene el ID, usa la sesión (Riesgo 3.5)
         const respuesta = await fetch('/api/mis-alarmas?todas=1', { signal: controller.signal });
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const todas = await respuesta.json();
@@ -155,7 +152,6 @@ async function cargarTomasPendientes() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_ALARMAS_MS);
     try {
-        // NUEVO: La ruta usa sesión, no el USER_ID
         const r = await fetch('/api/mis-tomas-pendientes', { signal: controller.signal });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const tomas = await r.json();
@@ -273,7 +269,6 @@ function mostrarListaAlarmas() {
     if (alarmas.length === 0) listaAlarmas.append(crearItemVacio('No tienes alarmas activas.'));
     const ordenadas = [...alarmas].sort((a, b) => ((a.fecha || '') + a.hora).localeCompare((b.fecha || '') + b.hora));
     for (const alarma of ordenadas) {
-        // NUEVO: se muestra la dosis si la alarma la tiene
         const textoAlarma = (alarma.fecha ? fechaLegible(alarma.fecha) + ' ' : '') + alarma.hora + ' · ' + alarma.titulo + (alarma.dosis ? ' (' + alarma.dosis + ')' : '') + (alarma.es_repetitiva ? ' (cada día)' : '');
         const btnQuitar = crearBoton('Quitar', async () => { await desactivarAlarma(alarma.id); await cargarAlarmas(); });
         listaAlarmas.append(crearItemAlarma(textoAlarma, btnQuitar));
@@ -289,7 +284,6 @@ function mostrarListaAlarmas() {
         if (alarma.ultima_vez_sono) {
             estado = 'sonó el ' + new Date(alarma.ultima_vez_sono).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
         }
-        // NUEVO: se muestra la dosis si la alarma la tiene
         const textoAlarma = alarma.hora + ' · ' + alarma.titulo + (alarma.dosis ? ' (' + alarma.dosis + ')' : '') + ' (' + estado + ')';
         const btnReactivar = crearBoton('Reactivar', () => reactivarAlarma(alarma));
         listaInactivas.append(crearItemAlarma(textoAlarma, btnReactivar));
@@ -330,9 +324,8 @@ formAlarma.addEventListener('submit', async (evento) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                // NUEVO: Ya no mandamos user_id, lo gestiona Flask con sesión
                 titulo: inputTitulo.value.trim(),
-                dosis: inputDosis.value.trim(),        // NUEVO: dosis (opcional)
+                dosis: inputDosis.value.trim(),
                 fecha: inputFecha.value,               
                 hora: inputHora.value,                 
                 es_repetitiva: inputRepetitiva.checked

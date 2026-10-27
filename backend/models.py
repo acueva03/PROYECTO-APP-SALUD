@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date, timezone
-# NUEVO: Importar herramientas de seguridad para cifrar contraseñas (Riesgo 3.5)
+
+# Importar herramientas de seguridad para cifrar contraseñas (Riesgo 3.5)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
@@ -29,25 +30,25 @@ class User(db.Model):
     altura = db.Column(db.Float, nullable=True)           
     rol = db.Column(db.String(20), nullable=False)         
 
-    # NUEVO: Campo para la contraseña encriptada
+    # Campo para la contraseña encriptada
     password_hash = db.Column(db.String(256), nullable=True)
 
-    # NUEVO: Función para generar el hash de la contraseña
+    # Función para generar el hash de la contraseña
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
-    # NUEVO: Función para comprobar si la contraseña coincide
+    # Función para comprobar si la contraseña coincide
     def check_password(self, password):
         if not self.password_hash:
             return False
         return check_password_hash(self.password_hash, password)
 
-    # NUEVO: Nombre y apellidos juntos, para mostrarlos en las pantallas
+    # Nombre y apellidos juntos, para mostrarlos en las pantallas
     @property
     def nombre_completo(self):
         return f"{self.nombre} {self.apellidos or ''}".strip()
 
-    # NUEVO: Iniciales para el avatar (ej: María Rodríguez -> MR)
+    # Iniciales para el avatar (ej: María Rodríguez -> MR)
     @property
     def iniciales(self):
         ini = self.nombre[0] if self.nombre else ''

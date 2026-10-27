@@ -6,7 +6,7 @@ with app.app_context():
         alberto = User(nombre='Alberto', rol='supervisor')
         maria = User(nombre='María', apellidos='Rodríguez', edad=78, peso=62, rol='dependiente')
         
-        # NUEVO: Asignar contraseñas (1234) para las pruebas
+        # Asignar contraseñas (1234) para las pruebas
         alberto.set_password('1234')
         maria.set_password('1234')
 

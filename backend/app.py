@@ -2,7 +2,6 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone, date
-# NUEVO: Añadidos session, redirect y url_for
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from sqlalchemy import inspect, text
 from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma, PesoRegistro, ahora
@@ -11,7 +10,7 @@ app = Flask(__name__,
             template_folder='../frontend/templates', 
             static_folder='../frontend/static')
 
-# NUEVO: Configuración de sesiones para el login seguro
+# Configuración de sesiones para el login seguro
 app.config['SECRET_KEY'] = 'clave_super_secreta_cambiar_en_produccion'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
@@ -28,7 +27,6 @@ with app.app_context():
     db.create_all()
 
 def actualizar_columnas():
-    # tabla -> columnas que deben existir (nombre, tipo SQL)
     necesarias = {
         'alarms': [('fecha', 'VARCHAR(10)'),
                    ('ultima_vez_sono', 'DATETIME'),
@@ -94,7 +92,7 @@ def usuario_actual():
     user_id = session.get('user_id')
     return db.session.get(User, user_id) if user_id else None
 
-# ---------------- NUEVO: RUTAS DE LOGIN ----------------
+# ---------------- RUTAS DE LOGIN Y LOGOUT ----------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -122,7 +120,7 @@ def logout():
     return redirect(url_for('login'))
 # --------------------------------------------------------
 
-# NUEVO: Rutas principales protegidas con sesión
+# Rutas principales protegidas con sesión:
 @app.route('/')
 def inicio():
     if 'user_id' not in session or session.get('rol') != 'dependiente':
@@ -167,7 +165,6 @@ def crear_alarma():
         return jsonify({'error': 'No se pudo guardar la alarma'}), 500
     return jsonify({'mensaje': 'Alarma configurada', 'alarma': alarma_a_dict(nueva_alarma)}), 201
 
-# NUEVO: La ruta ya no pide el id en la URL, lo coge de la sesión
 @app.route('/api/mis-alarmas', methods=['GET'])
 def listar_mis_alarmas():
     user_id = session.get('user_id')
@@ -196,7 +193,6 @@ def activar_sos():
     print("ALERTA SOS RECIBIDA:", alerta.id)
     return jsonify({'mensaje': 'Alerta SOS emitida', 'alerta_id': alerta.id}), 201
 
-# NUEVO: Panel del supervisor, lee las alertas buscando por la sesión
 @app.route('/api/mis-alertas', methods=['GET'])
 def alertas_activas():
     supervisor_id = session.get('user_id')
@@ -227,14 +223,13 @@ def atender_alerta(alerta_id):
 
 @app.route('/api/alarmas/<int:alarma_id>/estado', methods=['PATCH'])
 def cambiar_estado_alarma(alarma_id):
-    # NUEVO: hace falta sesión
     user_id = session.get('user_id')
     if not user_id: return jsonify({'error': 'No autorizado'}), 401
 
     alarma = db.session.get(Alarm, alarma_id)
     if not alarma: return jsonify({'error': 'Alarma no encontrada'}), 404
 
-    # NUEVO: la alarma tiene que ser del usuario que llama
+    # la alarma tiene que ser del usuario que llama
     if alarma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -247,14 +242,13 @@ def cambiar_estado_alarma(alarma_id):
 
 @app.route('/api/alarmas/<int:alarma_id>/sonada', methods=['POST'])
 def alarma_sonada(alarma_id):
-    # NUEVO: hace falta sesión
     user_id = session.get('user_id')
     if not user_id: return jsonify({'error': 'No autorizado'}), 401
 
     alarma = db.session.get(Alarm, alarma_id)
     if not alarma: return jsonify({'error': 'Alarma no encontrada'}), 404
 
-    # NUEVO: la alarma tiene que ser del usuario que llama
+    # la alarma tiene que ser del usuario que llama
     if alarma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -282,14 +276,13 @@ def tomas_pendientes_de(user_id, horas):
 
 @app.route('/api/tomas/<int:toma_id>/confirmar', methods=['POST'])
 def confirmar_toma(toma_id):
-    # NUEVO: hace falta sesión
     user_id = session.get('user_id')
     if not user_id: return jsonify({'error': 'No autorizado'}), 401
 
     toma = db.session.get(RegistroToma, toma_id)
     if not toma: return jsonify({'error': 'Toma no encontrada'}), 404
 
-    # NUEVO: la toma tiene que ser del usuario que llama
+    # la toma tiene que ser del usuario que llama
     if toma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
 
     if toma.estado != 'CONFIRMADA':
@@ -298,7 +291,6 @@ def confirmar_toma(toma_id):
         if not guardar_en_bd(): return jsonify({'error': 'Error base de datos'}), 500
     return jsonify({'mensaje': 'Toma confirmada'}), 200
 
-# NUEVO: Rutas actualizadas sin ID en la URL
 @app.route('/api/mis-tomas-pendientes', methods=['GET'])
 def tomas_pendientes():
     user_id = session.get('user_id')
@@ -318,7 +310,7 @@ def tomas_supervisor():
             resultado.append(d)
     return jsonify(resultado)
 
-# ---------------- NUEVO: APARTADO "MI SALUD" ----------------
+# ---------------- APARTADO "MI SALUD" ----------------
 def paciente_actual():
     """Devuelve (usuario, None) o (None, respuesta_de_error)."""
     usuario = usuario_actual()
