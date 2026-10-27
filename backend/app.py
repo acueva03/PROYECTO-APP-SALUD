@@ -7,7 +7,9 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from sqlalchemy import inspect, text
 from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma, ahora
 
-app = Flask(__name__)
+app = Flask(__name__, 
+            template_folder='../frontend/templates', 
+            static_folder='../frontend/static')
 
 # NUEVO: Configuración de sesiones para el login seguro
 app.config['SECRET_KEY'] = 'clave_super_secreta_cambiar_en_produccion'
