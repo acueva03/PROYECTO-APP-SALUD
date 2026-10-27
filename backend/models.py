@@ -102,6 +102,7 @@ class Alarm(db.Model):
     es_repetitiva = db.Column(db.Boolean, default=False)
     activa = db.Column(db.Boolean, default=True)
     ultima_vez_sono = db.Column(db.DateTime, nullable=True)
+    dosis = db.Column(db.String(50), nullable=True)
 
 # Alerta SOS, guarda la fecha/hora y su estado: activa o atendida
 class AlertSOS(db.Model):
@@ -123,3 +124,11 @@ class RegistroToma(db.Model):
     estado = db.Column(db.String(20), default='PENDIENTE')
     creado = db.Column(db.DateTime, default=ahora)
     confirmada_en = db.Column(db.DateTime, nullable=True)
+    dosis = db.Column(db.String(50), nullable=True)
+
+class PesoRegistro(db.Model):
+    __tablename__ = 'pesos'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    fecha = db.Column(db.String(10), nullable=False)   # 'AAAA-MM-DD', igual que en las alarmas
+    kg = db.Column(db.Float, nullable=False)

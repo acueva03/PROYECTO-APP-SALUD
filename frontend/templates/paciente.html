@@ -63,6 +63,10 @@
         <input id="alarma-titulo" type="text" maxlength="100" required
                placeholder="Ej: Tomar la pastilla">
 
+        <label for="alarma-dosis">Dosis (opcional)</label>
+        <input id="alarma-dosis" type="text" maxlength="50"
+               placeholder="Ej: 500 mg o 1 comprimido">
+
         <label for="alarma-fecha">Fecha</label>
         <input id="alarma-fecha" type="date" required>
 
@@ -84,10 +88,48 @@
     <h3>Ya sonaron o desactivadas</h3>
     <ul id="lista-inactivas" class="lista-alarmas"></ul>
 </section>
+
+<!-- MI SALUD (lo controla salud.js) -->
+<section class="tarjeta" id="seccion-salud" aria-labelledby="titulo-salud">
+    <div class="tarjeta-cabecera"><h2 id="titulo-salud">Mi salud</h2></div>
+
+    <h3>Mis datos</h3>
+    <dl class="datos-salud">
+        <div><dt>Edad</dt><dd data-campo="edad">—</dd></div>
+        <div><dt>Peso (kg)</dt><dd data-campo="peso">—</dd></div>
+        <div><dt>Altura</dt><dd data-campo="altura">—</dd></div>
+        <div><dt>IMC</dt><dd data-campo="imc">—</dd></div>
+        <div><dt>Grupo sanguíneo</dt><dd data-campo="grupo_sanguineo">—</dd></div>
+        <div><dt>Alergias</dt><dd data-campo="alergias">—</dd></div>
+        <div><dt>Enfermedades crónicas</dt><dd data-campo="enfermedades_cronicas">—</dd></div>
+        <div><dt>Medicación</dt><dd data-campo="medicacion">—</dd></div>
+        <div><dt>Contacto de emergencia</dt><dd data-campo="contacto_emergencia">—</dd></div>
+    </dl>
+
+    <h3>Evolución de mi peso</h3>
+    <form id="form-peso" class="formulario">
+        <label for="peso-kg">Peso (kg)</label>
+        <input id="peso-kg" type="number" step="0.1" min="20" max="300" required>
+        <label for="peso-fecha">Fecha</label>
+        <input id="peso-fecha" type="date" required>
+        <button type="submit" class="btn btn-primario">Guardar peso</button>
+        <p id="mensaje-peso" class="mensaje" role="status" aria-live="polite"></p>
+    </form>
+    <div class="grafico"><canvas id="grafico-peso"></canvas></div>
+    <p id="aviso-grafico" class="texto-suave" hidden></p>
+
+    <h3>Tomas de los últimos 14 días</h3>
+    <div class="grafico"><canvas id="grafico-tomas"></canvas></div>
+
+    <h3>Registro de medicamentos</h3>
+    <ul id="lista-historial" class="lista-alarmas"></ul>
+</section>
 {% endblock %}
 
 {% block pie %}Al pulsar el botón SOS, tu supervisor recibirá un aviso inmediato.{% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='conexion.js') }}"></script>
+<script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='salud.js') }}"></script>
 {% endblock %}

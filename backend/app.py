@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone, date
 # NUEVO: Añadidos session, redirect y url_for
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from sqlalchemy import inspect, text
-from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma, ahora
+from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma, PesoRegistro, ahora
 
 app = Flask(__name__, 
             template_folder='../frontend/templates', 
@@ -28,12 +28,20 @@ with app.app_context():
     db.create_all()
 
 def actualizar_columnas():
-    columnas = {c['name'] for c in inspect(db.engine).get_columns('alarms')}
+    # tabla -> columnas que deben existir (nombre, tipo SQL)
+    necesarias = {
+        'alarms': [('fecha', 'VARCHAR(10)'),
+                   ('ultima_vez_sono', 'DATETIME'),
+                   ('dosis', 'VARCHAR(50)')],
+        'registros_toma': [('dosis', 'VARCHAR(50)')],
+    }
+    inspector = inspect(db.engine)
     with db.engine.begin() as con:
-        if 'fecha' not in columnas:
-            con.execute(text('ALTER TABLE alarms ADD COLUMN fecha VARCHAR(10)'))
-        if 'ultima_vez_sono' not in columnas:
-            con.execute(text('ALTER TABLE alarms ADD COLUMN ultima_vez_sono DATETIME'))
+        for tabla, columnas in necesarias.items():
+            existentes = {c['name'] for c in inspector.get_columns(tabla)}
+            for nombre, tipo in columnas:
+                if nombre not in existentes:
+                    con.execute(text(f'ALTER TABLE {tabla} ADD COLUMN {nombre} {tipo}'))
         con.execute(text('UPDATE alarms SET fecha = :hoy WHERE fecha IS NULL AND activa = 1'),
                     {'hoy': date.today().isoformat()})
 
@@ -78,7 +86,8 @@ def alarma_a_dict(a):
         'es_repetitiva': a.es_repetitiva,
         'activa': a.activa,
         'ultima_vez_sono': (a.ultima_vez_sono.replace(tzinfo=timezone.utc).isoformat()
-                            if a.ultima_vez_sono else None)
+                            if a.ultima_vez_sono else None),
+        'dosis': a.dosis
     }
 
 def usuario_actual():
@@ -150,7 +159,8 @@ def crear_alarma():
         titulo=titulo,
         hora=data.get('hora'),
         fecha=data.get('fecha'),
-        es_repetitiva=bool(data.get('es_repetitiva', False))
+        es_repetitiva=bool(data.get('es_repetitiva', False)),
+        dosis=((data.get('dosis') or '').strip()[:50] or None)   # NUEVO
     )
     db.session.add(nueva_alarma)
     if not guardar_en_bd():
@@ -251,9 +261,9 @@ def alarma_sonada(alarma_id):
     fecha_local, hora_local, fecha_prevista = data.get('fecha_local'), data.get('hora_local'), data.get('fecha_prevista')
     if not (fecha_valida(fecha_local) and hora_valida(hora_local) and fecha_valida(fecha_prevista)):
         return jsonify({'error': 'Datos faltantes'}), 400
-    registro = RegistroToma.query.filter_by(alarma_id=alarma.id, fecha_prevista=fecha_prevista, hora_prevista=alarma.hora).first()
+    registro = RegistroToma.query.filter_by(alarma_id=alarma.id, fecha_prevista=fecha_prevista, hora_prevista=alarma.hora, dosis=alarma.dosis).first()
     if not registro:
-        registro = RegistroToma(alarma_id=alarma.id, user_id=alarma.user_id, titulo=alarma.titulo, fecha_prevista=fecha_prevista, hora_prevista=alarma.hora)
+        registro = RegistroToma(alarma_id=alarma.id, user_id=alarma.user_id, titulo=alarma.titulo, fecha_prevista=fecha_prevista, hora_prevista=alarma.hora, dosis=alarma.dosis)
         db.session.add(registro)
     if alarma.activa and alarma.fecha == fecha_prevista:
         alarma.ultima_vez_sono = ahora()
@@ -307,6 +317,85 @@ def tomas_supervisor():
             d['dependiente'] = dep.nombre
             resultado.append(d)
     return jsonify(resultado)
+
+# ---------------- NUEVO: APARTADO "MI SALUD" ----------------
+def paciente_actual():
+    """Devuelve (usuario, None) o (None, respuesta_de_error)."""
+    usuario = usuario_actual()
+    if not usuario: return None, (jsonify({'error': 'No autorizado'}), 401)
+    if usuario.rol != 'dependiente': return None, (jsonify({'error': 'Prohibido'}), 403)
+    return usuario, None
+
+@app.route('/api/mi-salud', methods=['GET'])
+def mi_salud():
+    usuario, error = paciente_actual()
+    if error: return error
+    ficha = usuario.ficha_medica
+    imc = None
+    if usuario.peso and usuario.altura:
+        altura_m = usuario.altura / 100 if usuario.altura > 3 else usuario.altura  # admite cm o m
+        imc = round(usuario.peso / (altura_m ** 2), 1)
+    return jsonify({
+        'nombre_completo': usuario.nombre_completo,
+        'edad': usuario.edad,
+        'peso': usuario.peso,
+        'altura': usuario.altura,
+        'imc': imc,
+        'grupo_sanguineo': ficha.grupo_sanguineo if ficha else None,
+        'alergias': ficha.alergias if ficha else None,
+        'enfermedades_cronicas': ficha.enfermedades_cronicas if ficha else None,
+        'medicacion': ficha.medicacion if ficha else None,
+        'contacto_emergencia': (f"{ficha.contacto_emergencia_nombre} ({ficha.contacto_emergencia_telefono})"
+                                if ficha and ficha.contacto_emergencia_nombre else None)
+    })
+
+@app.route('/api/mi-peso', methods=['GET'])
+def listar_peso():
+    usuario, error = paciente_actual()
+    if error: return error
+    registros = (PesoRegistro.query.filter_by(user_id=usuario.id)
+                 .order_by(PesoRegistro.fecha, PesoRegistro.id).all())
+    return jsonify([{'fecha': r.fecha, 'kg': r.kg} for r in registros])
+
+@app.route('/api/mi-peso', methods=['POST'])
+def anadir_peso():
+    usuario, error = paciente_actual()
+    if error: return error
+    data = request.get_json(silent=True) or {}
+    try:
+        kg = float(data.get('kg'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Peso inválido'}), 400
+    if not 20 <= kg <= 300: return jsonify({'error': 'El peso debe estar entre 20 y 300 kg'}), 400
+    fecha = data.get('fecha')
+    if not fecha_valida(fecha): return jsonify({'error': 'Fecha inválida'}), 400
+    if fecha > date.today().isoformat(): return jsonify({'error': 'La fecha no puede ser futura'}), 400
+
+    # Si es el pesaje más reciente, actualiza también el peso "actual" del usuario
+    ultimo = (PesoRegistro.query.filter_by(user_id=usuario.id)
+              .order_by(PesoRegistro.fecha.desc(), PesoRegistro.id.desc()).first())
+    db.session.add(PesoRegistro(user_id=usuario.id, fecha=fecha, kg=round(kg, 1)))
+    if not ultimo or fecha >= ultimo.fecha:
+        usuario.peso = round(kg, 1)
+    if not guardar_en_bd(): return jsonify({'error': 'No se pudo guardar el peso'}), 500
+    return jsonify({'mensaje': 'Peso guardado'}), 201
+
+@app.route('/api/mi-historial-tomas', methods=['GET'])
+def historial_tomas():
+    usuario, error = paciente_actual()
+    if error: return error
+    dias = max(1, min(request.args.get('dias', 30, type=int), 365))
+    desde = (date.today() - timedelta(days=dias)).isoformat()
+    tomas = (RegistroToma.query
+             .filter(RegistroToma.user_id == usuario.id, RegistroToma.fecha_prevista >= desde)
+             .order_by(RegistroToma.fecha_prevista.desc(), RegistroToma.hora_prevista.desc()).all())
+    return jsonify([{
+        'titulo': t.titulo, 'dosis': t.dosis,
+        'fecha_prevista': t.fecha_prevista, 'hora_prevista': t.hora_prevista,
+        'estado': t.estado,
+        'confirmada_en': (t.confirmada_en.replace(tzinfo=timezone.utc).isoformat()
+                          if t.confirmada_en else None)
+    } for t in tomas])
 
 if __name__ == '__main__':
     app.run(debug=True)

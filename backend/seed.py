@@ -1,5 +1,5 @@
 from app import app
-from models import db, User, MedicalProfile
+from models import db, User, MedicalProfile, PesoRegistro
 
 with app.app_context():
     if User.query.count() == 0:
@@ -12,6 +12,10 @@ with app.app_context():
 
         alberto.dependientes.append(maria)
         db.session.add_all([alberto, maria])
+        db.session.commit()
+
+        for fecha, kg in [('2026-09-01', 64.0), ('2026-09-15', 63.2), ('2026-10-01', 62.5), ('2026-10-20', 62.0)]:
+            db.session.add(PesoRegistro(user_id=maria.id, fecha=fecha, kg=kg))
         db.session.commit()
 
         db.session.add(MedicalProfile(

@@ -252,6 +252,7 @@ cargarTomasPendientes().finally(() => setInterval(comprobarAlarmas, INTERVALO_CO
 
 const formAlarma = document.getElementById('form-alarma');
 const inputTitulo = document.getElementById('alarma-titulo');
+const inputDosis = document.getElementById('alarma-dosis');   // NUEVO: campo de dosis
 const inputFecha = document.getElementById('alarma-fecha');
 const inputHora = document.getElementById('alarma-hora');
 const inputRepetitiva = document.getElementById('alarma-repetitiva');
@@ -272,7 +273,8 @@ function mostrarListaAlarmas() {
     if (alarmas.length === 0) listaAlarmas.append(crearItemVacio('No tienes alarmas activas.'));
     const ordenadas = [...alarmas].sort((a, b) => ((a.fecha || '') + a.hora).localeCompare((b.fecha || '') + b.hora));
     for (const alarma of ordenadas) {
-        const textoAlarma = (alarma.fecha ? fechaLegible(alarma.fecha) + ' ' : '') + alarma.hora + ' · ' + alarma.titulo + (alarma.es_repetitiva ? ' (cada día)' : '');
+        // NUEVO: se muestra la dosis si la alarma la tiene
+        const textoAlarma = (alarma.fecha ? fechaLegible(alarma.fecha) + ' ' : '') + alarma.hora + ' · ' + alarma.titulo + (alarma.dosis ? ' (' + alarma.dosis + ')' : '') + (alarma.es_repetitiva ? ' (cada día)' : '');
         const btnQuitar = crearBoton('Quitar', async () => { await desactivarAlarma(alarma.id); await cargarAlarmas(); });
         listaAlarmas.append(crearItemAlarma(textoAlarma, btnQuitar));
     }
@@ -287,7 +289,8 @@ function mostrarListaAlarmas() {
         if (alarma.ultima_vez_sono) {
             estado = 'sonó el ' + new Date(alarma.ultima_vez_sono).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
         }
-        const textoAlarma = alarma.hora + ' · ' + alarma.titulo + ' (' + estado + ')';
+        // NUEVO: se muestra la dosis si la alarma la tiene
+        const textoAlarma = alarma.hora + ' · ' + alarma.titulo + (alarma.dosis ? ' (' + alarma.dosis + ')' : '') + ' (' + estado + ')';
         const btnReactivar = crearBoton('Reactivar', () => reactivarAlarma(alarma));
         listaInactivas.append(crearItemAlarma(textoAlarma, btnReactivar));
     }
@@ -329,6 +332,7 @@ formAlarma.addEventListener('submit', async (evento) => {
             body: JSON.stringify({
                 // NUEVO: Ya no mandamos user_id, lo gestiona Flask con sesión
                 titulo: inputTitulo.value.trim(),
+                dosis: inputDosis.value.trim(),        // NUEVO: dosis (opcional)
                 fecha: inputFecha.value,               
                 hora: inputHora.value,                 
                 es_repetitiva: inputRepetitiva.checked
