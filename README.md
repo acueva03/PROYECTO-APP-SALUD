@@ -56,5 +56,8 @@ Para ejecutar el código Python que da el enlace a la web con Flask, en la termi
 * source venv/bin/activate
 * python3 backend/app.py
 * python3 backend/seed.py
+* Pruebas:
+     1. cd backend
+     2. python -m unittest test_app.py -v
 
 (Añadiremos aquí las instrucciones detalladas paso a paso sobre cómo instalar y utilizar nuestra app).
