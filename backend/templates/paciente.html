@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App de Salud - Botón SOS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='paciente.css') }}">
+</head>
+
+<body>
+
+    <!-- ENCABEZADO -->
+    <header class="encabezado-asistencia">
+        <div class="contenedor-cabecera">
+            <span class="icono-asistencia" aria-hidden="true">♥</span>
+            <h1>App de Salud</h1>
+        </div>
+    </header>
+
+     <!-- AVISO DE ALARMA: oculto hasta que llega la hora de una alarma (lo controla conexion.js) -->
+    <div id="aviso-alarma" class="aviso-alarma" role="alertdialog" aria-live="assertive" hidden>
+        <p class="aviso-alarma-icono" aria-hidden="true">⏰</p>
+        <p id="texto-alarma" class="aviso-alarma-texto"></p>
+        <button id="btn-alarma-entendida" class="btn-alarma-entendida" type="button">Entendido</button>
+    </div>
+
+    <!-- El navegador bloquea el sonido hasta que el usuario toca la página; este botón lo desbloquea -->
+    <div id="aviso-sonido-alarma" class="aviso-sonido-alarma">
+        <button id="btn-activar-sonido-alarma" type="button">🔔 Activar sonido de alarmas</button>
+    </div>
+
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="contenedor-principal">
+        <section class="seccion-sos">
+
+            <p class="instruccion-sos">
+                ¿Necesitas ayuda?<br>
+                Pulsa el botón rojo
+            </p>
+
+            <div class="area-boton">
+                <!-- El id "boton-sos" lo usa conexion.js: no cambiarlo -->
+                <button id="boton-sos" class="btn-sos" type="button"
+                        aria-label="Botón de emergencia SOS. Pulsa para pedir ayuda inmediata">
+                    <span class="icono-sos" aria-hidden="true">⚠</span>
+                    <span class="texto-sos">SOS</span>
+                    <span class="subtexto-sos">Pedir ayuda</span>
+                </button>
+            </div>
+
+            <div class="estado-sistema" role="status">
+                <span id="punto-estado" class="punto-estado gris" aria-hidden="true"></span>
+                <span id="texto-estado">Comprobando conexión…</span>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- LISTA DE HOY: se ve siempre, por si el cronómetro de alarmas fallara (riesgo 3.3.3) -->
+    <section class="seccion-alarmas" aria-labelledby="titulo-hoy">
+        <h2 id="titulo-hoy">Lo que tengo hoy</h2>
+        <ul id="lista-hoy" class="lista-alarmas"></ul>
+    </section>
+
+    <!-- GESTIÓN DE ALARMAS: formulario para crear alarmas + lista de las activas (lo controla conexion.js) -->
+    <section class="seccion-alarmas" aria-labelledby="titulo-alarmas">
+        <h2 id="titulo-alarmas">Mis alarmas</h2>
+
+        <!-- type="time" entrega siempre "HH:MM", el formato que guarda la BD -->
+        <form id="form-alarma" class="form-alarma">
+            <label for="alarma-titulo">¿Qué quieres recordar?</label>
+            <input id="alarma-titulo" type="text" maxlength="100" required
+                   placeholder="Ej: Tomar la pastilla">
+
+            <label for="alarma-fecha">Fecha</label>
+            <input id="alarma-fecha" type="date" required>                   
+            <label for="alarma-hora">Hora</label>
+            <input id="alarma-hora" type="time" required>
+
+            <label class="check-repetir">
+                <input id="alarma-repetitiva" type="checkbox">
+                Repetir todos los días
+            </label>
+
+            <button type="submit" class="btn-crear-alarma">Crear alarma</button>
+            <p id="mensaje-alarma" class="mensaje-alarma" role="status" aria-live="polite"></p>
+        </form>
+
+        <h3>Alarmas activas</h3>
+        <ul id="lista-alarmas" class="lista-alarmas"></ul>
+        
+        <h3>Ya sonaron o desactivadas</h3>
+        <ul id="lista-inactivas" class="lista-alarmas"></ul>
+    </section>
+
+        <!-- REGISTRO DIARIO DE SALUD: sueño y estado de ánimo (lo controla conexion.js, PARTE 4) -->
+    <section class="seccion-alarmas" aria-labelledby="titulo-metricas">
+        <h2 id="titulo-metricas">¿Cómo has dormido hoy?</h2>
+
+        <form id="form-metrica" class="form-alarma">
+            <label for="metrica-sueno">Horas de sueño</label>
+            <input id="metrica-sueno" type="number" min="0" max="24" step="0.5"
+                   placeholder="Ej: 7.5">
+
+            <label for="metrica-animo">Estado de ánimo</label>
+            <select id="metrica-animo">
+                <option value="">— Elige una opción —</option>
+                <option value="Muy bien">Muy bien</option>
+                <option value="Bien">Bien</option>
+                <option value="Regular">Regular</option>
+                <option value="Mal">Mal</option>
+            </select>
+
+            <button type="submit" class="btn-crear-alarma">Guardar</button>
+            <p id="mensaje-metrica" class="mensaje-alarma" role="status" aria-live="polite"></p>
+        </form>
+    </section>
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="pie-asistencia">
+        <p>Al pulsar el botón, tu supervisor recibirá un aviso inmediato.</p>
+    </footer>
+
+    <!-- Lógica de conexión con el servidor (Andrés) -->
+    <script src="{{ url_for('static', filename='conexion.js') }}"></script>
+</body>
+
+</html>
