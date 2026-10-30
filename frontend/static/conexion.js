@@ -77,6 +77,18 @@ function proximaFecha(hora) {
     return formatearFecha(d);
 }
 
+const NOMBRES_DIAS = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+
+// "(cada día)", "(lunes a viernes)", "(lun, mié, vie)"... según los días guardados
+function textoRepeticion(alarma) {
+    if (!alarma.es_repetitiva) return '';
+    const dias = alarma.dias || [];
+    if (dias.length === 0 || dias.length === 7) return ' (cada día)';
+    if (dias.join() === '0,1,2,3,4') return ' (lunes a viernes)';
+    if (dias.join() === '5,6') return ' (fines de semana)';
+    return ' (' + dias.map(d => NOMBRES_DIAS[d]).join(', ') + ')';
+}
+
 async function cargarAlarmas() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_ALARMAS_MS);
@@ -180,6 +192,18 @@ async function reactivarAlarma(alarma) {
     await cargarAlarmas();
 }
 
+async function eliminarAlarma(alarma) {
+    if (!confirm('¿Seguro que quieres eliminar la alarma «' + alarma.titulo + '»? No se puede deshacer.')) return;
+    try {
+        const r = await fetch('/api/alarmas/' + alarma.id, { method: 'DELETE' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        mostrarMensajeAlarma('Alarma eliminada', false);
+    } catch (error) {
+        mostrarMensajeAlarma('No se pudo eliminar la alarma. Inténtalo de nuevo.', true);
+    }
+    await cargarAlarmas();
+}
+
 function mostrarAviso(aviso) {
     avisosEnPantalla.push(aviso);
     textoAlarma.textContent = avisosEnPantalla.map(a => a.texto).join(' · ');
@@ -247,17 +271,35 @@ setInterval(cargarAlarmas, INTERVALO_RECARGA_MS);
 cargarTomasPendientes().finally(() => setInterval(comprobarAlarmas, INTERVALO_COMPROBACION_MS));
 
 const formAlarma = document.getElementById('form-alarma');
-const inputTitulo = document.getElementById('alarma-titulo');
+const selectRepeticion = document.getElementById('alarma-repeticion');
+const fieldsetDias = document.getElementById('alarma-dias');
 const inputDosis = document.getElementById('alarma-dosis');   // NUEVO: campo de dosis
 const inputFecha = document.getElementById('alarma-fecha');
 const inputHora = document.getElementById('alarma-hora');
-const inputRepetitiva = document.getElementById('alarma-repetitiva');
+const inputTitulo = document.getElementById('alarma-titulo');
 const mensajeAlarma = document.getElementById('mensaje-alarma');
 const listaAlarmas = document.getElementById('lista-alarmas');
 const listaInactivas = document.getElementById('lista-inactivas');
 
 function prepararCampoFecha() { inputFecha.min = fechaActual(); inputFecha.value = fechaActual(); }
 prepararCampoFecha();
+
+// Los días solo se ven con "Elegir los días…"
+selectRepeticion.addEventListener('change', () => {
+    fieldsetDias.hidden = selectRepeticion.value !== 'personalizada';
+});
+
+// Convierte la opción elegida en lo que espera el servidor ({ repeticion, dias })
+function datosRepeticion() {
+    const opcion = selectRepeticion.value;
+    if (opcion === 'una') return { repeticion: 'una' };
+    if (opcion === 'diaria') return { repeticion: 'diaria' };
+    if (opcion === 'laborables') return { repeticion: 'dias', dias: [0, 1, 2, 3, 4] };
+    if (opcion === 'finde') return { repeticion: 'dias', dias: [5, 6] };
+    const dias = [...fieldsetDias.querySelectorAll('input[name="dia"]:checked')]
+        .map(c => Number(c.value));
+    return { repeticion: 'dias', dias: dias };
+}
 
 function mostrarMensajeAlarma(texto, esError) {
     mensajeAlarma.textContent = texto;
@@ -269,9 +311,10 @@ function mostrarListaAlarmas() {
     if (alarmas.length === 0) listaAlarmas.append(crearItemVacio('No tienes alarmas activas.'));
     const ordenadas = [...alarmas].sort((a, b) => ((a.fecha || '') + a.hora).localeCompare((b.fecha || '') + b.hora));
     for (const alarma of ordenadas) {
-        const textoAlarma = (alarma.fecha ? fechaLegible(alarma.fecha) + ' ' : '') + alarma.hora + ' · ' + alarma.titulo + (alarma.dosis ? ' (' + alarma.dosis + ')' : '') + (alarma.es_repetitiva ? ' (cada día)' : '');
-        const btnQuitar = crearBoton('Quitar', async () => { await desactivarAlarma(alarma.id); await cargarAlarmas(); });
-        listaAlarmas.append(crearItemAlarma(textoAlarma, btnQuitar));
+        const textoAlarma = (alarma.fecha ? fechaLegible(alarma.fecha) + ' ' : '') + alarma.hora + ' · ' + alarma.titulo + (alarma.dosis ? ' (' + alarma.dosis + ')' : '') + textoRepeticion(alarma);
+        const btnDesactivar = crearBoton('Desactivar', async () => { await desactivarAlarma(alarma.id); await cargarAlarmas(); }, 'btn-neutro-alarma');
+        const btnEliminar = crearBoton('Eliminar', () => eliminarAlarma(alarma));
+        listaAlarmas.append(crearItemAlarma(textoAlarma, btnDesactivar, btnEliminar));
     }
     listaInactivas.replaceChildren();
     if (alarmasInactivas.length === 0) {
@@ -285,8 +328,9 @@ function mostrarListaAlarmas() {
             estado = 'sonó el ' + new Date(alarma.ultima_vez_sono).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
         }
         const textoAlarma = alarma.hora + ' · ' + alarma.titulo + (alarma.dosis ? ' (' + alarma.dosis + ')' : '') + ' (' + estado + ')';
-        const btnReactivar = crearBoton('Reactivar', () => reactivarAlarma(alarma));
-        listaInactivas.append(crearItemAlarma(textoAlarma, btnReactivar));
+                const btnReactivar = crearBoton('Reactivar', () => reactivarAlarma(alarma), 'btn-neutro-alarma');
+        const btnEliminar = crearBoton('Eliminar', () => eliminarAlarma(alarma));
+        listaInactivas.append(crearItemAlarma(textoAlarma, btnReactivar, btnEliminar));
     }
 }
 
@@ -296,17 +340,22 @@ function crearItemVacio(mensaje) {
     vacio.textContent = mensaje;
     return vacio;
 }
-function crearItemAlarma(textoAlarma, boton) {
+
+function crearItemAlarma(textoAlarma, ...botones) {
     const li = document.createElement('li');
     const texto = document.createElement('span');
     texto.textContent = textoAlarma;
-    li.append(texto, boton);
+    const acciones = document.createElement('div');
+    acciones.className = 'acciones-alarma';
+    acciones.append(...botones);
+    li.append(texto, acciones);
     return li;
 }
-function crearBoton(etiqueta, alHacerClic) {
+
+function crearBoton(etiqueta, alHacerClic, clase = 'btn-quitar-alarma') {
     const boton = document.createElement('button');
     boton.type = 'button';
-    boton.className = 'btn-quitar-alarma';   
+    boton.className = clase;
     boton.textContent = etiqueta;
     boton.addEventListener('click', alHacerClic);
     return boton;
@@ -319,6 +368,11 @@ formAlarma.addEventListener('submit', async (evento) => {
         mostrarMensajeAlarma('Esa fecha y hora ya han pasado.', true);
         return;
     }
+    const repeticion = datosRepeticion();
+    if (repeticion.repeticion === 'dias' && repeticion.dias.length === 0) {
+        mostrarMensajeAlarma('Marca al menos un día de la semana.', true);
+        return;
+    }
     try {
         const respuesta = await fetch('/api/alarmas', {
             method: 'POST',
@@ -326,9 +380,9 @@ formAlarma.addEventListener('submit', async (evento) => {
             body: JSON.stringify({
                 titulo: inputTitulo.value.trim(),
                 dosis: inputDosis.value.trim(),
-                fecha: inputFecha.value,               
-                hora: inputHora.value,                 
-                es_repetitiva: inputRepetitiva.checked
+                fecha: inputFecha.value,
+                hora: inputHora.value,
+                ...repeticion
             })
         });
         const datos = await respuesta.json();
@@ -336,9 +390,10 @@ formAlarma.addEventListener('submit', async (evento) => {
             mostrarMensajeAlarma(datos.error || 'No se pudo crear la alarma', true);
             return;
         }
-        mostrarMensajeAlarma('Alarma creada para el ' + fechaLegible(inputFecha.value) + ' a las ' + inputHora.value, false);
-        formAlarma.reset();       
-        prepararCampoFecha();     
+        mostrarMensajeAlarma('Alarma creada. Sonará el ' + fechaLegible(datos.alarma.fecha) + ' a las ' + datos.alarma.hora, false);
+        formAlarma.reset();
+        fieldsetDias.hidden = true;     // reset() vuelve a "Solo una vez"
+        prepararCampoFecha();
         await cargarAlarmas();    
     } catch (error) {
         mostrarMensajeAlarma('Error de conexión: no se pudo crear la alarma', true);

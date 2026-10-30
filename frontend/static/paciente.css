@@ -175,3 +175,59 @@
 @media (max-width: 480px) {
     .datos-salud { grid-template-columns: 1fr; }
 }
+
+/* ---------- Repetición de alarmas y botones de acción ---------- */
+.form-alarma select {
+    width: 100%;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 1.2rem;
+    border: 2px solid #94A3B8;
+    border-radius: 10px;
+    background-color: #FFFFFF;
+}
+
+.dias-semana {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.75rem;
+    border: 2px solid #94A3B8;
+    border-radius: 10px;
+}
+
+.dias-semana legend { font-weight: 700; padding: 0 0.4rem; }
+
+.dia-semana {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+}
+
+.dia-semana input { width: 1.4rem; height: 1.4rem; }
+
+.lista-alarmas li { flex-wrap: wrap; }          /* en móvil los botones bajan de línea */
+
+.acciones-alarma {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* "Desactivar" y "Reactivar" en azul; "Eliminar" sigue en rojo (.btn-quitar-alarma) */
+.btn-neutro-alarma {
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    background-color: #FFFFFF;
+    color: var(--color-primario);
+    border: 2px solid var(--color-primario);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-neutro-alarma:hover { background-color: var(--color-primario-suave); }

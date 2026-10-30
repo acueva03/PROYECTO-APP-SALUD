@@ -67,16 +67,32 @@
         <input id="alarma-dosis" type="text" maxlength="50"
                placeholder="Ej: 500 mg o 1 comprimido">
 
-        <label for="alarma-fecha">Fecha</label>
+        <label for="alarma-fecha">Fecha (o primer día)</label>
         <input id="alarma-fecha" type="date" required>
 
         <label for="alarma-hora">Hora</label>
         <input id="alarma-hora" type="time" required>
 
-        <label class="check-repetir">
-            <input id="alarma-repetitiva" type="checkbox">
-            Repetir todos los días
-        </label>
+        <label for="alarma-repeticion">¿Cuándo se repite?</label>
+        <select id="alarma-repeticion">
+            <option value="una">Solo una vez</option>
+            <option value="diaria">Todos los días</option>
+            <option value="laborables">De lunes a viernes</option>
+            <option value="finde">Sábados y domingos</option>
+            <option value="personalizada">Elegir los días…</option>
+        </select>
+
+        <!-- Solo se ve con "Elegir los días…" (lo controla conexion.js). Valores: lunes=0 ... domingo=6 -->
+        <fieldset id="alarma-dias" class="dias-semana" hidden>
+            <legend>Días de la semana</legend>
+            <label class="dia-semana"><input type="checkbox" name="dia" value="0"> Lun</label>
+            <label class="dia-semana"><input type="checkbox" name="dia" value="1"> Mar</label>
+            <label class="dia-semana"><input type="checkbox" name="dia" value="2"> Mié</label>
+            <label class="dia-semana"><input type="checkbox" name="dia" value="3"> Jue</label>
+            <label class="dia-semana"><input type="checkbox" name="dia" value="4"> Vie</label>
+            <label class="dia-semana"><input type="checkbox" name="dia" value="5"> Sáb</label>
+            <label class="dia-semana"><input type="checkbox" name="dia" value="6"> Dom</label>
+        </fieldset>
 
         <button type="submit" class="btn btn-primario btn-crear-alarma">Crear alarma</button>
         <p id="mensaje-alarma" class="mensaje-alarma" role="status" aria-live="polite"></p>

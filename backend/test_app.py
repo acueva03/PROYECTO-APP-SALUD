@@ -179,5 +179,33 @@ class TestAppSalud(unittest.TestCase):
         resp_confirmar = self.cliente.post(f'/api/tomas/{registro_id}/confirmar')
         self.assertEqual(resp_confirmar.status_code, 200)
 
+    def test_alarma_dias_y_eliminar(self):
+        """Alarma de lunes a viernes que empieza en sábado -> salta al lunes; y se puede eliminar."""
+        self.cliente.post('/login', data={'nombre': 'María', 'password': '1234'})
+
+        sabado = date.today()
+        while sabado.weekday() != 5:
+            sabado += timedelta(days=1)
+
+        resp = self.cliente.post('/api/alarmas', json={
+            'titulo': 'Pastilla', 'fecha': sabado.isoformat(), 'hora': '10:00',
+            'repeticion': 'dias', 'dias': [0, 1, 2, 3, 4]
+        })
+        self.assertEqual(resp.status_code, 201)
+        alarma = json.loads(resp.data)['alarma']
+        self.assertEqual(alarma['dias'], [0, 1, 2, 3, 4])
+        self.assertEqual(date.fromisoformat(alarma['fecha']).weekday(), 0)   # lunes
+
+        # Sin ningún día marcado debe fallar
+        resp_mal = self.cliente.post('/api/alarmas', json={
+            'titulo': 'Pastilla', 'fecha': sabado.isoformat(), 'hora': '10:00',
+            'repeticion': 'dias', 'dias': []
+        })
+        self.assertEqual(resp_mal.status_code, 400)
+
+        # Eliminar y comprobar que ya no existe
+        self.assertEqual(self.cliente.delete('/api/alarmas/' + str(alarma['id'])).status_code, 200)
+        self.assertEqual(self.cliente.delete('/api/alarmas/' + str(alarma['id'])).status_code, 404)
+
 if __name__ == '__main__':
     unittest.main()

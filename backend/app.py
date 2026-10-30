@@ -30,7 +30,8 @@ def actualizar_columnas():
     necesarias = {
         'alarms': [('fecha', 'VARCHAR(10)'),
                    ('ultima_vez_sono', 'DATETIME'),
-                   ('dosis', 'VARCHAR(50)')],
+                   ('dosis', 'VARCHAR(50)'),
+                   ('dias_semana', 'VARCHAR(20)')],
         'registros_toma': [('dosis', 'VARCHAR(50)')],
     }
     inspector = inspect(db.engine)
@@ -69,11 +70,51 @@ def fecha_valida(texto):
         return False
     return len(texto) == 10
 
-def siguiente_fecha(fecha_local, hora_local, hora_alarma):
+def dias_a_lista(texto):
+    """'0,1,4' -> [0, 1, 4]. Lunes=0 ... domingo=6 (igual que date.weekday()). Vacío -> [] (todos los días)."""
+    if not texto:
+        return []
+    return sorted({int(x) for x in texto.split(',') if x.strip().isdigit()})
+
+
+def leer_repeticion(data):
+    """Interpreta lo que manda el navegador. Devuelve (es_repetitiva, dias_texto, error)."""
+    repeticion = data.get('repeticion')
+    if repeticion is None:                       # formato antiguo: solo es_repetitiva
+        return bool(data.get('es_repetitiva', False)), None, None
+    if repeticion == 'una':
+        return False, None, None
+    if repeticion == 'diaria':
+        return True, None, None
+    if repeticion == 'dias':
+        dias = data.get('dias')
+        if (not isinstance(dias, list) or not dias or
+                any(isinstance(d, bool) or not isinstance(d, int) or not 0 <= d <= 6 for d in dias)):
+            return None, None, 'Elige al menos un día de la semana'
+        dias = sorted(set(dias))
+        if len(dias) == 7:                       # los 7 días = todos los días
+            return True, None, None
+        return True, ','.join(str(d) for d in dias), None
+    return None, None, 'Tipo de repetición inválido'
+
+
+def primera_fecha_valida(fecha, dias):
+    """Si la fecha cae en un día no elegido, avanza hasta el primer día elegido."""
+    dia = datetime.strptime(fecha, '%Y-%m-%d').date()
+    if dias:
+        for _ in range(7):
+            if dia.weekday() in dias:
+                break
+            dia += timedelta(days=1)
+    return dia.isoformat()
+
+
+def siguiente_fecha(fecha_local, hora_local, hora_alarma, dias=None):
+    """Próxima fecha de una alarma repetitiva que acaba de sonar (respetando los días elegidos)."""
     dia = datetime.strptime(fecha_local, '%Y-%m-%d').date()
     if hora_alarma <= hora_local:
         dia += timedelta(days=1)
-    return dia.isoformat()
+    return primera_fecha_valida(dia.isoformat(), dias)
 
 def alarma_a_dict(a):
     return {
@@ -85,7 +126,8 @@ def alarma_a_dict(a):
         'activa': a.activa,
         'ultima_vez_sono': (a.ultima_vez_sono.replace(tzinfo=timezone.utc).isoformat()
                             if a.ultima_vez_sono else None),
-        'dosis': a.dosis
+        'dosis': a.dosis,
+        'dias': dias_a_lista(a.dias_semana)      # [] = todos los días
     }
 
 def usuario_actual():
@@ -152,13 +194,19 @@ def crear_alarma():
     if datetime.strptime(data['fecha'], '%Y-%m-%d').date() < date.today() - timedelta(days=1):
         return jsonify({'error': 'La fecha no puede estar en el pasado'}), 400
 
+    es_repetitiva, dias_texto, error = leer_repeticion(data)
+    if error: return jsonify({'error': error}), 400
+    # Si el primer día no encaja con los días marcados, empieza el siguiente día marcado
+    fecha_inicio = primera_fecha_valida(data['fecha'], dias_a_lista(dias_texto))
+
     nueva_alarma = Alarm(
         user_id=user_id,
         titulo=titulo,
         hora=data.get('hora'),
-        fecha=data.get('fecha'),
-        es_repetitiva=bool(data.get('es_repetitiva', False)),
-        dosis=((data.get('dosis') or '').strip()[:50] or None)   # NUEVO
+        fecha=fecha_inicio,
+        es_repetitiva=es_repetitiva,
+        dias_semana=dias_texto,
+        dosis=((data.get('dosis') or '').strip()[:50] or None)
     )
     db.session.add(nueva_alarma)
     if not guardar_en_bd():
@@ -237,8 +285,23 @@ def cambiar_estado_alarma(alarma_id):
     if 'activa' in data: alarma.activa = bool(data['activa'])
     else: alarma.activa = not alarma.activa
     if 'fecha' in data: alarma.fecha = data['fecha']
+    if alarma.activa and alarma.fecha and alarma.dias_semana:
+        alarma.fecha = primera_fecha_valida(alarma.fecha, dias_a_lista(alarma.dias_semana))
     if not guardar_en_bd(): return jsonify({'error': 'Error al guardar'}), 500
     return jsonify({'mensaje': 'Actualizado', 'alarma_id': alarma.id, 'activa': alarma.activa}), 200
+
+@app.route('/api/alarmas/<int:alarma_id>', methods=['DELETE'])
+def eliminar_alarma(alarma_id):
+    user_id = session.get('user_id')
+    if not user_id: return jsonify({'error': 'No autorizado'}), 401
+
+    alarma = db.session.get(Alarm, alarma_id)
+    if not alarma: return jsonify({'error': 'Alarma no encontrada'}), 404
+    if alarma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403   # solo borra las suyas
+
+    db.session.delete(alarma)
+    if not guardar_en_bd(): return jsonify({'error': 'No se pudo eliminar la alarma'}), 500
+    return jsonify({'mensaje': 'Alarma eliminada'}), 200
 
 @app.route('/api/alarmas/<int:alarma_id>/sonada', methods=['POST'])
 def alarma_sonada(alarma_id):
@@ -261,7 +324,7 @@ def alarma_sonada(alarma_id):
         db.session.add(registro)
     if alarma.activa and alarma.fecha == fecha_prevista:
         alarma.ultima_vez_sono = ahora()
-        if alarma.es_repetitiva: alarma.fecha = siguiente_fecha(fecha_local, hora_local, alarma.hora)
+        if alarma.es_repetitiva: alarma.fecha = siguiente_fecha(fecha_local, hora_local, alarma.hora, dias_a_lista(alarma.dias_semana))
         else: alarma.activa = False
     if not guardar_en_bd(): return jsonify({'error': 'Error base de datos'}), 500
     return jsonify({'mensaje': 'Sonada', 'registro_id': registro.id, 'alarma': alarma_a_dict(alarma)}), 200
@@ -388,6 +451,10 @@ def historial_tomas():
         'confirmada_en': (t.confirmada_en.replace(tzinfo=timezone.utc).isoformat()
                           if t.confirmada_en else None)
     } for t in tomas])
+
+@app.errorhandler(500)
+def error_interno(e):
+    return jsonify({'error': 'Error interno del servidor'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

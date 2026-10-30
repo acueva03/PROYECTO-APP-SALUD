@@ -104,6 +104,7 @@ class Alarm(db.Model):
     activa = db.Column(db.Boolean, default=True)
     ultima_vez_sono = db.Column(db.DateTime, nullable=True)
     dosis = db.Column(db.String(50), nullable=True)
+    dias_semana = db.Column(db.String(20), nullable=True)   # <-- NUEVA: '0,2,4' (lunes=0 ... domingo=6)
 
 # Alerta SOS, guarda la fecha/hora y su estado: activa o atendida
 class AlertSOS(db.Model):
