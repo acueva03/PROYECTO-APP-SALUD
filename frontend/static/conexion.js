@@ -94,6 +94,7 @@ async function cargarAlarmas() {
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_ALARMAS_MS);
     try {
         const respuesta = await fetch('/api/mis-alarmas?todas=1', { signal: controller.signal });
+        if (respuesta.status === 401) { window.location.href = '/login'; return; }
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const todas = await respuesta.json();
         alarmas = todas.filter(a => a.activa);
