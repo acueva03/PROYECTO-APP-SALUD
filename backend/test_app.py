@@ -1,3 +1,6 @@
+import os
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'   # CAMBIADO: antes de importar app, para no tocar app_salud.db
+
 import unittest
 import json
 from datetime import date, timedelta
@@ -13,7 +16,6 @@ class TestAppSalud(unittest.TestCase):
         Crea una base de datos temporal en memoria para no modificar 'app_salud.db'.
         """
         app.config['TESTING'] = True
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['WTF_CSRF_ENABLED'] = False
         
         self.cliente = app.test_client()
@@ -23,9 +25,9 @@ class TestAppSalud(unittest.TestCase):
         db.create_all()
         
         # Poblamos la BD temporal con usuarios de prueba
-        self.maria = User(nombre='María', rol='dependiente')
+        self.maria = User(nombre='María', username='maria', rol='dependiente')
         self.maria.set_password('1234')
-        self.alberto = User(nombre='Alberto', rol='supervisor')
+        self.alberto = User(nombre='Alberto', username='alberto', rol='supervisor')
         self.alberto.set_password('1234')
         self.alberto.dependientes.append(self.maria)
         
@@ -68,7 +70,7 @@ class TestAppSalud(unittest.TestCase):
         self.assertEqual(respuesta_bloqueada.status_code, 401)
         
         # 2. Iniciar sesión como María (dependiente)
-        self.cliente.post('/login', data={'nombre': 'María', 'password': '1234'})
+        self.cliente.post('/login', data={'username': 'maria', 'password': '1234'})
         
         # 3. Emitir SOS con sesión activa (debe funcionar devolviendo 201)
         respuesta_ok = self.cliente.post('/api/sos', json={})
@@ -84,7 +86,7 @@ class TestAppSalud(unittest.TestCase):
         Objetivo: Probar el control de errores de la ruta /api/alarmas.
         Fuerza al código a fallar enviando formatos de hora inválidos y fechas pasadas.
         """
-        self.cliente.post('/login', data={'nombre': 'María', 'password': '1234'})
+        self.cliente.post('/login', data={'username': 'maria', 'password': '1234'})
         
         # 1. Forzar fallo: Hora inválida (Condición límite/errónea)
         resp_hora_invalida = self.cliente.post('/api/alarmas', json={
@@ -112,14 +114,14 @@ class TestAppSalud(unittest.TestCase):
         Fuerza a la aplicación a rechazar acciones que no corresponden al perfil del usuario.
         """
         # 1. Login como María (dependiente)
-        self.cliente.post('/login', data={'nombre': 'María', 'password': '1234'})
+        self.cliente.post('/login', data={'username': 'maria', 'password': '1234'})
         
         # María intenta acceder al panel del supervisor (la app debe redirigirla al login con código 302)
         resp_supervisor = self.cliente.get('/supervisor')
         self.assertEqual(resp_supervisor.status_code, 302)
         
         # 2. Login como Alberto (supervisor)
-        self.cliente.post('/login', data={'nombre': 'Alberto', 'password': '1234'})
+        self.cliente.post('/login', data={'username': 'alberto', 'password': '1234'})
         
         # Alberto intenta emitir un SOS (debe fallar con un error 400 Bad Request)
         resp_sos_supervisor = self.cliente.post('/api/sos', json={})
@@ -130,7 +132,7 @@ class TestAppSalud(unittest.TestCase):
         Objetivo: Probar la validación de la API de salud (Bloque C).
         Verifica que no se puedan introducir pesos irreales o fechas futuras.
         """
-        self.cliente.post('/login', data={'nombre': 'María', 'password': '1234'})
+        self.cliente.post('/login', data={'username': 'maria', 'password': '1234'})
         
         # 1. Forzar fallo: Peso por debajo del límite (ej. 10 kg)
         resp_peso_bajo = self.cliente.post('/api/mi-peso', json={
@@ -161,7 +163,7 @@ class TestAppSalud(unittest.TestCase):
         db.session.add(alarma)
         db.session.commit()
         
-        self.cliente.post('/login', data={'nombre': 'María', 'password': '1234'})
+        self.cliente.post('/login', data={'username': 'maria', 'password': '1234'})
         
         # 2. Simulamos que la alarma suena en el frontend
         resp_sonada = self.cliente.post(f'/api/alarmas/{alarma.id}/sonada', json={
@@ -181,7 +183,7 @@ class TestAppSalud(unittest.TestCase):
 
     def test_alarma_dias_y_eliminar(self):
         """Alarma de lunes a viernes que empieza en sábado -> salta al lunes; y se puede eliminar."""
-        self.cliente.post('/login', data={'nombre': 'María', 'password': '1234'})
+        self.cliente.post('/login', data={'username': 'maria', 'password': '1234'})
 
         sabado = date.today()
         while sabado.weekday() != 5:

@@ -5,6 +5,9 @@ from datetime import datetime, timedelta, timezone, date
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from sqlalchemy import inspect, text
 from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma, PesoRegistro, ahora
+# NUEVO: reglas de usuario y contraseña
+from validaciones import (normalizar_username, validar_username,
+                          validar_password, username_desde_nombre)
 
 app = Flask(__name__, 
             template_folder='../frontend/templates', 
@@ -15,7 +18,9 @@ app.config['SECRET_KEY'] = 'clave_super_secreta_cambiar_en_produccion'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'app_salud.db') 
+# CAMBIADO: si existe la variable DATABASE_URL (la usan los tests) se usa esa base de datos;
+# si no, la real app_salud.db
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or ('sqlite:///' + os.path.join(BASE_DIR, 'app_salud.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'check_same_thread': False, 'timeout': 15}
@@ -33,6 +38,7 @@ def actualizar_columnas():
                    ('dosis', 'VARCHAR(50)'),
                    ('dias_semana', 'VARCHAR(20)')],
         'registros_toma': [('dosis', 'VARCHAR(50)')],
+        'users': [('username', 'VARCHAR(50)')],                       # NUEVO
     }
     inspector = inspect(db.engine)
     with db.engine.begin() as con:
@@ -41,11 +47,25 @@ def actualizar_columnas():
             for nombre, tipo in columnas:
                 if nombre not in existentes:
                     con.execute(text(f'ALTER TABLE {tabla} ADD COLUMN {nombre} {tipo}'))
+        # NUEVO: SQLite no deja añadir UNIQUE con ALTER TABLE, así que se hace con un índice único
+        con.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username)'))
         con.execute(text('UPDATE alarms SET fecha = :hoy WHERE fecha IS NULL AND activa = 1'),
                     {'hoy': date.today().isoformat()})
 
+# NUEVO: da username a los usuarios que ya existían (Alberto -> alberto)
+def rellenar_usernames():
+    usados = {u.username for u in User.query.filter(User.username.isnot(None)).all()}
+    for u in User.query.filter(User.username.is_(None)).all():
+        candidato = username_desde_nombre(u.nombre)
+        if len(candidato) < 3 or candidato in usados:
+            candidato = f'{candidato}{u.id}'
+        u.username = candidato
+        usados.add(candidato)
+    db.session.commit()
+
 with app.app_context():
     actualizar_columnas()
+    rellenar_usernames()                                              # NUEVO
 
 def guardar_en_bd():
     try:
@@ -134,15 +154,16 @@ def usuario_actual():
     user_id = session.get('user_id')
     return db.session.get(User, user_id) if user_id else None
 
-# ---------------- RUTAS DE LOGIN Y LOGOUT ----------------
+# ---------------- RUTAS DE LOGIN, REGISTRO Y LOGOUT ----------------
+# CAMBIADO: el login ahora busca por username (único), no por nombre
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         data = request.form
-        nombre = data.get('nombre')
-        password = data.get('password')
-        
-        usuario = User.query.filter_by(nombre=nombre).first()
+        username = normalizar_username(data.get('username'))
+        password = data.get('password') or ''
+
+        usuario = User.query.filter_by(username=username).first() if username else None
         if usuario and usuario.check_password(password):
             session.clear()
             session['user_id'] = usuario.id
@@ -153,8 +174,50 @@ def login():
                 return redirect(url_for('supervisor'))
             return redirect(url_for('inicio'))
             
-        return render_template('login.html', error="Nombre o contraseña incorrectos")
+        # Mensaje genérico: no decimos si falló el usuario o la contraseña
+        return render_template('login.html', error="Usuario o contraseña incorrectos"), 401
     return render_template('login.html')
+
+# NUEVO: cualquiera puede crear su cuenta (paciente o supervisor)
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    if request.method == 'GET':
+        return render_template('registro.html', valores={})
+
+    data = request.form
+    nombre = (data.get('nombre') or '').strip()
+    apellidos = (data.get('apellidos') or '').strip()
+    username = normalizar_username(data.get('username'))
+    password = data.get('password') or ''
+    rol = data.get('rol')
+
+    error = None
+    if not nombre or len(nombre) > 100 or len(apellidos) > 120:
+        error = 'Escribe tu nombre (y apellidos de forma razonable)'
+    elif rol not in ('dependiente', 'supervisor'):
+        error = 'Elige un tipo de cuenta'
+    else:
+        error = validar_username(username) or validar_password(password)
+        if not error and password != data.get('password2'):
+            error = 'Las contraseñas no coinciden'
+        if not error and User.query.filter_by(username=username).first():
+            error = 'Ese nombre de usuario ya está en uso'
+
+    if error:
+        return render_template('registro.html', error=error, valores=data), 400
+
+    usuario = User(nombre=nombre, apellidos=apellidos or None, username=username, rol=rol)
+    usuario.set_password(password)
+    db.session.add(usuario)
+    if not guardar_en_bd():
+        return render_template('registro.html', error='No se pudo crear la cuenta. Inténtalo de nuevo.', valores=data), 500
+
+    # Al registrarse entra directamente con su cuenta
+    session.clear()
+    session['user_id'] = usuario.id
+    session['rol'] = usuario.rol
+    session['nombre'] = usuario.nombre
+    return redirect(url_for('supervisor') if usuario.rol == 'supervisor' else url_for('inicio'))
 
 @app.route('/logout')
 def logout():

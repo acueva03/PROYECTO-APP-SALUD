@@ -30,6 +30,10 @@ class User(db.Model):
     altura = db.Column(db.Float, nullable=True)           
     rol = db.Column(db.String(20), nullable=False)         
 
+    # NUEVO (Sprint 3): nombre de usuario único para iniciar sesión.
+    # nullable=True porque los usuarios antiguos no lo tenían (se rellena al arrancar la app).
+    username = db.Column(db.String(50), unique=True, nullable=True, index=True)
+
     # Campo para la contraseña encriptada
     password_hash = db.Column(db.String(256), nullable=True)
 
@@ -104,7 +108,7 @@ class Alarm(db.Model):
     activa = db.Column(db.Boolean, default=True)
     ultima_vez_sono = db.Column(db.DateTime, nullable=True)
     dosis = db.Column(db.String(50), nullable=True)
-    dias_semana = db.Column(db.String(20), nullable=True)   # <-- NUEVA: '0,2,4' (lunes=0 ... domingo=6)
+    dias_semana = db.Column(db.String(20), nullable=True)   # '0,2,4' (lunes=0 ... domingo=6)
 
 # Alerta SOS, guarda la fecha/hora y su estado: activa o atendida
 class AlertSOS(db.Model):

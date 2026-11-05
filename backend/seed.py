@@ -1,12 +1,13 @@
 from app import app
 from models import db, User, MedicalProfile, PesoRegistro
 
+# SOLO PARA DESARROLLO: crea dos usuarios de ejemplo. Las cuentas reales se crean en /registro.
 with app.app_context():
     if User.query.count() == 0:
-        alberto = User(nombre='Alberto', rol='supervisor')
-        maria = User(nombre='María', apellidos='Rodríguez', edad=78, peso=62, rol='dependiente')
+        alberto = User(nombre='Alberto', username='alberto', rol='supervisor')
+        maria = User(nombre='María', apellidos='Rodríguez', username='maria', edad=78, peso=62, rol='dependiente')
         
-        # Asignar contraseñas (1234) para las pruebas
+        # Contraseña de prueba (el registro real exige 8 caracteres con letra y número)
         alberto.set_password('1234')
         maria.set_password('1234')
 
@@ -27,6 +28,6 @@ with app.app_context():
             contacto_emergencia_telefono='600000000'
         ))
         db.session.commit()
-        print('Datos de prueba creados (Contraseñas de Alberto y María: 1234)')
+        print('Datos de prueba creados. Usuarios: alberto y maria (contraseña 1234)')
     else:
         print('La base de datos ya tiene usuarios; no se ha hecho nada')

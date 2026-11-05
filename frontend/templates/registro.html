@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block titulo %}Crear cuenta - App Salud{% endblock %}
+{% block subtitulo %}Crear una cuenta nueva{% endblock %}
+{% block clase_contenedor %}contenedor-estrecho{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta">
+    <div class="tarjeta-cabecera">
+        <h2>Crear cuenta</h2>
+    </div>
+
+    <form method="POST" action="/registro" class="formulario">
+        {% if error %}
+            <p class="mensaje error" role="alert">{{ error }}</p>
+        {% endif %}
+
+        <label for="rol">Tipo de cuenta</label>
+        <select id="rol" name="rol" required>
+            <option value="">Elige una opción…</option>
+            <option value="dependiente" {% if valores.get('rol') == 'dependiente' %}selected{% endif %}>Soy paciente (quiero ayuda y recordatorios)</option>
+            <option value="supervisor" {% if valores.get('rol') == 'supervisor' %}selected{% endif %}>Soy supervisor (cuido a un familiar)</option>
+        </select>
+
+        <label for="nombre">Nombre</label>
+        <input id="nombre" type="text" name="nombre" maxlength="100" value="{{ valores.get('nombre', '') }}" required autofocus>
+
+        <label for="apellidos">Apellidos (opcional)</label>
+        <input id="apellidos" type="text" name="apellidos" maxlength="120" value="{{ valores.get('apellidos', '') }}">
+
+        <label for="username">Usuario (para iniciar sesión)</label>
+        <input id="username" type="text" name="username" maxlength="30" autocomplete="username"
+               value="{{ valores.get('username', '') }}" placeholder="Ej: pedro.gil" required>
+
+        <label for="password">Contraseña (mínimo 8, con letra y número)</label>
+        <input id="password" type="password" name="password" autocomplete="new-password" required>
+
+        <label for="password2">Repite la contraseña</label>
+        <input id="password2" type="password" name="password2" autocomplete="new-password" required>
+
+        <button type="submit" class="btn btn-primario btn-ancho">Crear cuenta</button>
+        <p class="texto-suave">¿Ya tienes cuenta? <a href="/login">Iniciar sesión</a></p>
+    </form>
+</section>
+{% endblock %}
