@@ -59,5 +59,6 @@ Para ejecutar el código Python que da el enlace a la web con Flask, en la termi
 * Pruebas:
      1. cd backend
      2. python -m unittest test_app.py -v
+     3. python -m unittest test_registro -v
 
 (Añadiremos aquí las instrucciones detalladas paso a paso sobre cómo instalar y utilizar nuestra app).
