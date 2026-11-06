@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block titulo %}Vincular paciente - App Salud{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='supervisor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vinculos.css') }}">
+{% endblock %}
+{% block subtitulo %}Vincular un paciente{% endblock %}
+{% block clase_contenedor %}contenedor-estrecho{% endblock %}
+
+{% block contenido %}
+<p><a href="/supervisor">← Volver al panel</a></p>
+
+<section class="tarjeta">
+    <div class="tarjeta-cabecera"><h2>Vincular un paciente</h2></div>
+    <p class="texto-suave">Pide al paciente que abra «Vincular un supervisor» en su móvil y te dé el código de 8 caracteres o te enseñe el QR.</p>
+
+    <form id="form-canjear" class="formulario">
+        <label for="codigo">Código de vinculación</label>
+        <input id="codigo" type="text" maxlength="12" autocomplete="off" autocapitalize="characters"
+               spellcheck="false" placeholder="Ej: ABCD-EFGH" value="{{ codigo }}" required>
+
+        <button type="submit" class="btn btn-primario btn-ancho">Vincular</button>
+        <button id="btn-escanear" type="button" class="btn btn-secundario btn-ancho">📷 Escanear QR con la cámara</button>
+        <p id="mensaje-canje" class="mensaje" role="status" aria-live="polite"></p>
+    </form>
+
+    <div id="lector-qr" class="lector-qr" hidden></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ url_for('static', filename='vinculos_supervisor.js') }}"></script>
+{% endblock %}

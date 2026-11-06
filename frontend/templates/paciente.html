@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 
 {% block titulo %}App Salud - Paciente{% endblock %}
-{% block css %}<link rel="stylesheet" href="{{ url_for('static', filename='paciente.css') }}">{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='paciente.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vinculos.css') }}">
+{% endblock %}
 {% block subtitulo %}Mi asistencia{% endblock %}
 
 <!-- Indicador de conexión en la cabecera (lo controla conexion.js) -->
@@ -105,6 +108,21 @@
     <ul id="lista-inactivas" class="lista-alarmas"></ul>
 </section>
 
+<!-- VINCULAR UN SUPERVISOR (lo controla vinculos_paciente.js) -->
+<section class="tarjeta" id="seccion-vinculo" aria-labelledby="titulo-vinculo">
+    <div class="tarjeta-cabecera"><h2 id="titulo-vinculo">Vincular un supervisor</h2></div>
+    <p class="texto-suave">Para que un familiar pueda cuidar de ti, genera un código y dáselo, o enséñale el QR. Caduca a los 10 minutos y solo sirve una vez.</p>
+
+    <button id="btn-generar-codigo" class="btn btn-primario btn-ancho" type="button">Generar código de vinculación</button>
+    <p id="mensaje-vinculo" class="mensaje" role="status" aria-live="polite"></p>
+
+    <div id="bloque-codigo" class="bloque-codigo" hidden>
+        <p id="codigo-vinculo" class="codigo-grande" aria-label="Código de vinculación"></p>
+        <img id="qr-vinculo" class="qr-vinculo" alt="Código QR para vincular un supervisor" hidden>
+        <p id="caducidad-vinculo" class="texto-suave"></p>
+    </div>
+</section>
+
 <!-- MI SALUD (lo controla salud.js) -->
 <section class="tarjeta" id="seccion-salud" aria-labelledby="titulo-salud">
     <div class="tarjeta-cabecera"><h2 id="titulo-salud">Mi salud</h2></div>
@@ -148,4 +166,5 @@
 <script src="{{ url_for('static', filename='conexion.js') }}"></script>
 <script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
 <script src="{{ url_for('static', filename='salud.js') }}"></script>
+<script src="{{ url_for('static', filename='vinculos_paciente.js') }}"></script>
 {% endblock %}

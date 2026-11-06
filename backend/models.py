@@ -138,3 +138,22 @@ class PesoRegistro(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     fecha = db.Column(db.String(10), nullable=False)   # 'AAAA-MM-DD', igual que en las alarmas
     kg = db.Column(db.Float, nullable=False)
+
+# Código temporal para vincular un supervisor con un paciente.
+# NUNCA se guarda el código en claro: solo su hash SHA-256.
+class CodigoVinculo(db.Model):
+    __tablename__ = 'codigos_vinculo'
+    id = db.Column(db.Integer, primary_key=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    codigo_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    creado = db.Column(db.DateTime, default=ahora)
+    expira = db.Column(db.DateTime, nullable=False)
+    usado = db.Column(db.Boolean, default=False, nullable=False)
+
+# Cada canje fallido se anota para bloquear la fuerza bruta (5 fallos en 10 minutos)
+class IntentoVinculo(db.Model):
+    __tablename__ = 'intentos_vinculo'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    ip = db.Column(db.String(45), nullable=True)
+    fecha = db.Column(db.DateTime, default=ahora)

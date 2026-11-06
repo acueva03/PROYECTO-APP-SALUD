@@ -3,11 +3,15 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone, date
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from sqlalchemy import inspect, text
-from models import db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma, PesoRegistro, ahora
+from sqlalchemy import inspect, text, or_
+from models import (db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma,
+                    PesoRegistro, CodigoVinculo, IntentoVinculo, ahora)
 # NUEVO: reglas de usuario y contraseña
 from validaciones import (normalizar_username, validar_username,
                           validar_password, username_desde_nombre)
+from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_codigo,
+                      formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
+                      VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
 
 app = Flask(__name__, 
             template_folder='../frontend/templates', 
@@ -514,6 +518,98 @@ def historial_tomas():
         'confirmada_en': (t.confirmada_en.replace(tzinfo=timezone.utc).isoformat()
                           if t.confirmada_en else None)
     } for t in tomas])
+
+# ---------------- VINCULACIÓN SUPERVISOR <-> PACIENTE (código y QR) ----------------
+def fallos_recientes(user_id, ip):
+    """Canjes fallidos en los últimos 10 min de esta cuenta O de esta IP."""
+    desde = (ahora() - timedelta(minutes=VENTANA_MINUTOS)).replace(tzinfo=None)
+    return IntentoVinculo.query.filter(
+        IntentoVinculo.fecha >= desde,
+        or_(IntentoVinculo.user_id == user_id, IntentoVinculo.ip == ip)
+    ).count()
+
+@app.route('/api/vinculos/codigo', methods=['POST'])
+def crear_codigo_vinculo():
+    """El PACIENTE genera un código de un solo uso, válido 10 minutos."""
+    paciente, error = paciente_actual()
+    if error: return error
+
+    # Un código nuevo invalida los anteriores que no se hubieran usado
+    CodigoVinculo.query.filter_by(paciente_id=paciente.id, usado=False).update({'usado': True})
+
+    for _ in range(5):
+        codigo = generar_codigo()
+        if not CodigoVinculo.query.filter_by(codigo_hash=hash_codigo(codigo)).first():
+            break
+    else:
+        return jsonify({'error': 'No se pudo generar el código'}), 500
+
+    expira = ahora() + timedelta(minutes=MINUTOS_VALIDEZ)
+    db.session.add(CodigoVinculo(paciente_id=paciente.id, codigo_hash=hash_codigo(codigo), expira=expira))
+    if not guardar_en_bd(): return jsonify({'error': 'No se pudo guardar el código'}), 500
+
+    # El QR contiene una URL que abre la pantalla de vincular con el código ya escrito
+    url = request.host_url + 'vincular?c=' + codigo
+    return jsonify({
+        'codigo': formatear_codigo(codigo),
+        'expira': expira.isoformat(),
+        'minutos': MINUTOS_VALIDEZ,
+        'url': url,
+        'qr': generar_qr(url)
+    }), 201
+
+@app.route('/api/vinculos/canjear', methods=['POST'])
+def canjear_codigo_vinculo():
+    """El SUPERVISOR introduce el código y queda vinculado con el paciente."""
+    sup = usuario_actual()
+    if not sup: return jsonify({'error': 'No autorizado'}), 401
+    if sup.rol != 'supervisor': return jsonify({'error': 'Prohibido'}), 403
+
+    ip = request.remote_addr or ''
+    # Se comprueba ANTES de mirar el código: durante el bloqueo ni el código bueno sirve
+    if fallos_recientes(sup.id, ip) >= MAX_FALLOS:
+        return jsonify({'error': 'Demasiados intentos fallidos. Espera 10 minutos e inténtalo de nuevo.'}), 429
+
+    data = request.get_json(silent=True) or {}
+    codigo = normalizar_codigo(data.get('codigo'))
+    registro = None
+    if formato_valido(codigo):
+        registro = CodigoVinculo.query.filter_by(codigo_hash=hash_codigo(codigo)).first()
+
+    # Inexistente, ya usado y caducado dan EXACTAMENTE la misma respuesta
+    invalido = (registro is None or registro.usado or
+                registro.expira.replace(tzinfo=timezone.utc) < ahora())
+    if invalido:
+        db.session.add(IntentoVinculo(user_id=sup.id, ip=ip))
+        guardar_en_bd()
+        return jsonify({'error': MENSAJE_CODIGO_INVALIDO}), 400
+
+    paciente = db.session.get(User, registro.paciente_id)
+    if not paciente or paciente.rol != 'dependiente':
+        return jsonify({'error': MENSAJE_CODIGO_INVALIDO}), 400
+
+    # Marcar como usado de forma atómica: si dos supervisores lo canjean a la vez, solo gana uno
+    filas = CodigoVinculo.query.filter_by(id=registro.id, usado=False).update({'usado': True})
+    if filas == 0:
+        db.session.rollback()
+        return jsonify({'error': MENSAJE_CODIGO_INVALIDO}), 400
+
+    ya_vinculado = paciente in sup.dependientes
+    if not ya_vinculado:
+        sup.dependientes.append(paciente)
+    if not guardar_en_bd(): return jsonify({'error': 'No se pudo completar la vinculación'}), 500
+
+    mensaje = ('Ya estabas vinculado con ' if ya_vinculado else 'Vinculado correctamente con ') + paciente.nombre_completo
+    return jsonify({'mensaje': mensaje,
+                    'paciente': {'id': paciente.id, 'nombre': paciente.nombre_completo}}), 200
+
+@app.route('/vincular')
+def pagina_vincular():
+    sup = usuario_actual()
+    if not sup or sup.rol != 'supervisor':
+        return redirect(url_for('login'))
+    # Si el supervisor llega desde el QR, el código viene en ?c= y se rellena solo (NO se canjea con un GET)
+    return render_template('vincular.html', usuario=sup, codigo=request.args.get('c', '')[:20])
 
 @app.errorhandler(500)
 def error_interno(e):
