@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone, date
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from sqlalchemy import inspect, text, or_
 from models import (db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma,
-                    PesoRegistro, CodigoVinculo, IntentoVinculo, ahora)
+                    PesoRegistro, CodigoVinculo, IntentoVinculo, ahora, hoy_madrid, ZONA)
 # NUEVO: reglas de usuario y contraseña
 from validaciones import (normalizar_username, validar_username,
                           validar_password, username_desde_nombre)
@@ -54,7 +54,7 @@ def actualizar_columnas():
         # NUEVO: SQLite no deja añadir UNIQUE con ALTER TABLE, así que se hace con un índice único
         con.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username)'))
         con.execute(text('UPDATE alarms SET fecha = :hoy WHERE fecha IS NULL AND activa = 1'),
-                    {'hoy': date.today().isoformat()})
+                    {'hoy': hoy_madrid().isoformat()})
 
 # NUEVO: da username a los usuarios que ya existían (Alberto -> alberto)
 def rellenar_usernames():
@@ -258,7 +258,7 @@ def crear_alarma():
     titulo = (data.get('titulo') or '').strip()
     if not titulo: return jsonify({'error': 'Falta titulo'}), 400
     
-    if datetime.strptime(data['fecha'], '%Y-%m-%d').date() < date.today() - timedelta(days=1):
+    if datetime.strptime(data['fecha'], '%Y-%m-%d').date() < hoy_madrid() - timedelta(days=1):
         return jsonify({'error': 'La fecha no puede estar en el pasado'}), 400
 
     es_repetitiva, dias_texto, error = leer_repeticion(data)
@@ -370,6 +370,11 @@ def eliminar_alarma(alarma_id):
     if not guardar_en_bd(): return jsonify({'error': 'No se pudo eliminar la alarma'}), 500
     return jsonify({'mensaje': 'Alarma eliminada'}), 200
 
+def fecha_local_plausible(fecha_local):
+    """3.13: la fecha que manda el móvil no puede diferir más de 1 día de la de Madrid."""
+    dia = datetime.strptime(fecha_local, '%Y-%m-%d').date()
+    return abs((dia - hoy_madrid()).days) <= 1
+
 @app.route('/api/alarmas/<int:alarma_id>/sonada', methods=['POST'])
 def alarma_sonada(alarma_id):
     user_id = session.get('user_id')
@@ -385,6 +390,8 @@ def alarma_sonada(alarma_id):
     fecha_local, hora_local, fecha_prevista = data.get('fecha_local'), data.get('hora_local'), data.get('fecha_prevista')
     if not (fecha_valida(fecha_local) and hora_valida(hora_local) and fecha_valida(fecha_prevista)):
         return jsonify({'error': 'Datos faltantes'}), 400
+    if not fecha_local_plausible(fecha_local):
+        return jsonify({'error': 'La fecha de tu dispositivo no es correcta'}), 400
     registro = RegistroToma.query.filter_by(alarma_id=alarma.id, fecha_prevista=fecha_prevista, hora_prevista=alarma.hora, dosis=alarma.dosis).first()
     if not registro:
         registro = RegistroToma(alarma_id=alarma.id, user_id=alarma.user_id, titulo=alarma.titulo, fecha_prevista=fecha_prevista, hora_prevista=alarma.hora, dosis=alarma.dosis)
@@ -491,7 +498,7 @@ def anadir_peso():
     if not 20 <= kg <= 300: return jsonify({'error': 'El peso debe estar entre 20 y 300 kg'}), 400
     fecha = data.get('fecha')
     if not fecha_valida(fecha): return jsonify({'error': 'Fecha inválida'}), 400
-    if fecha > date.today().isoformat(): return jsonify({'error': 'La fecha no puede ser futura'}), 400
+    if fecha > hoy_madrid().isoformat(): return jsonify({'error': 'La fecha no puede ser futura'}), 400
 
     # Si es el pesaje más reciente, actualiza también el peso "actual" del usuario
     ultimo = (PesoRegistro.query.filter_by(user_id=usuario.id)
@@ -507,7 +514,7 @@ def historial_tomas():
     usuario, error = paciente_actual()
     if error: return error
     dias = max(1, min(request.args.get('dias', 30, type=int), 365))
-    desde = (date.today() - timedelta(days=dias)).isoformat()
+    desde = (hoy_madrid() - timedelta(days=dias)).isoformat()
     tomas = (RegistroToma.query
              .filter(RegistroToma.user_id == usuario.id, RegistroToma.fecha_prevista >= desde)
              .order_by(RegistroToma.fecha_prevista.desc(), RegistroToma.hora_prevista.desc()).all())
@@ -610,6 +617,17 @@ def pagina_vincular():
         return redirect(url_for('login'))
     # Si el supervisor llega desde el QR, el código viene en ?c= y se rellena solo (NO se canjea con un GET)
     return render_template('vincular.html', usuario=sup, codigo=request.args.get('c', '')[:20])
+
+@app.route('/api/hora', methods=['GET'])
+def hora_servidor():
+    """3.13: el móvil compara su reloj con este. No necesita sesión y no devuelve datos personales."""
+    en_madrid = datetime.now(ZONA)
+    return jsonify({
+        'ahora_utc': datetime.now(timezone.utc).isoformat(),
+        'fecha': en_madrid.date().isoformat(),
+        'hora': en_madrid.strftime('%H:%M'),
+        'zona': 'Europe/Madrid'
+    })
 
 @app.errorhandler(500)
 def error_interno(e):

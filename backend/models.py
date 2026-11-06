@@ -10,6 +10,14 @@ db = SQLAlchemy()
 def ahora(): 
     return datetime.now(timezone.utc)
 
+from zoneinfo import ZoneInfo
+
+ZONA = ZoneInfo('Europe/Madrid')
+
+def hoy_madrid():
+    """Fecha de hoy en Madrid, con independencia de la zona horaria del servidor (riesgo 3.13)."""
+    return datetime.now(ZONA).date()
+
 # Tabla intermedia para vincular Supervisores con Dependientes
 supervisor_dependiente = db.Table(
     'supervisor_dependiente',
@@ -92,7 +100,7 @@ class HealthMetric(db.Model):
     __tablename__ = 'health_metrics'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    fecha = db.Column(db.Date, default=date.today)
+    fecha = db.Column(db.Date, default=hoy_madrid) 
     horas_sueno = db.Column(db.Float, nullable=True)
     estado_animo = db.Column(db.String(50), nullable=True)
 

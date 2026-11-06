@@ -24,6 +24,10 @@
     <button id="btn-alarma-posponer" class="btn btn-secundario btn-alarma-posponer" type="button">Posponer 10 minutos</button>
 </div>
 
+<!-- AVISO DE RELOJ DESAJUSTADO (riesgo 3.13, lo controla reloj.js) -->
+<div id="aviso-reloj" class="banner banner-peligro" role="alert" hidden></div>      <!-- NUEVO -->
+
+
 <!-- El navegador bloquea el sonido hasta que el usuario toca la página; este botón lo desbloquea -->
 <div id="aviso-sonido-alarma" class="banner banner-aviso">
     <button id="btn-activar-sonido-alarma" class="btn btn-primario" type="button">🔔 Activar sonido de alarmas</button>
@@ -168,4 +172,5 @@
 <script src="{{ url_for('static', filename='graficos.js') }}"></script> 
 <script src="{{ url_for('static', filename='salud.js') }}"></script>
 <script src="{{ url_for('static', filename='vinculos_paciente.js') }}"></script>
+<script src="{{ url_for('static', filename='reloj.js') }}"></script>
 {% endblock %}

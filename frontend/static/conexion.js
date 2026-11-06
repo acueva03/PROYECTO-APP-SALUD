@@ -142,6 +142,7 @@ async function registrarSonada(alarma, fechaLocal, horaLocal, aviso, intento = 1
             }),
             signal: controller.signal
         });
+        if (r.status === 400) return;   // el servidor rechaza los datos (p. ej. reloj mal): reintentar no sirve
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const datos = await r.json();
         aviso.registroId = datos.registro_id;
