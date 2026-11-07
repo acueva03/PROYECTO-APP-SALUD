@@ -1,0 +1,7 @@
+#!/bin/sh
+bloqueados=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(db|sqlite3?)$|(^|/)\.env$|(^|/)backups/')
+if [ -n "$bloqueados" ]; then
+    echo "COMMIT BLOQUEADO: no se pueden subir estos archivos:"
+    echo "$bloqueados"
+    exit 1
+fi

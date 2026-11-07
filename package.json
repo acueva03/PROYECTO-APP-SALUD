@@ -1,0 +1,6 @@
+{
+  "name": "app-salud",
+  "private": true,
+  "type": "module",
+  "devDependencies": { "eslint": "^9.0.0", "globals": "^15.0.0" }
+}

@@ -9,6 +9,7 @@ from models import (db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, Reg
 # NUEVO: reglas de usuario y contraseña
 from validaciones import (normalizar_username, validar_username,
                           validar_password, username_desde_nombre)
+from esquema import comprobar_esquema
 from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_codigo,
                       formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
                       VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
@@ -70,6 +71,7 @@ def rellenar_usernames():
 with app.app_context():
     actualizar_columnas()
     rellenar_usernames()                                              # NUEVO
+    comprobar_esquema(db)                                            # NUEVO
 
 def guardar_en_bd():
     try:

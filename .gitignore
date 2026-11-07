@@ -1,10 +1,22 @@
 venv/
-.vscode/
-.DS_Store/
-instance/
-*.db
-__pycache__/
-*.db.antes_de_restaurar
-backups/
-*.pyc
 .venv/
+.vscode/
+.vs/
+.DS_Store
+instance/
+__pycache__/
+*.pyc
+
+# Bases de datos y copias (datos de salud: nunca al repositorio)
+*.db
+*.db.antes_de_restaurar
+*.sqlite
+*.sqlite3
+backups/
+
+# Secretos (SECRET_KEY, riesgo 3.15)
+.env
+
+# Node (ESLint) y cobertura
+node_modules/
+.coverage
