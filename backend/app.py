@@ -457,16 +457,14 @@ def paciente_actual():
     if usuario.rol != 'dependiente': return None, (jsonify({'error': 'Prohibido'}), 403)
     return usuario, None
 
-@app.route('/api/mi-salud', methods=['GET'])
-def mi_salud():
-    usuario, error = paciente_actual()
-    if error: return error
+def datos_salud(usuario):
+    """Datos de salud de un usuario. Los usan el paciente y su supervisor."""
     ficha = usuario.ficha_medica
     imc = None
     if usuario.peso and usuario.altura:
         altura_m = usuario.altura / 100 if usuario.altura > 3 else usuario.altura  # admite cm o m
         imc = round(usuario.peso / (altura_m ** 2), 1)
-    return jsonify({
+    return {
         'nombre_completo': usuario.nombre_completo,
         'edad': usuario.edad,
         'peso': usuario.peso,
@@ -478,15 +476,38 @@ def mi_salud():
         'medicacion': ficha.medicacion if ficha else None,
         'contacto_emergencia': (f"{ficha.contacto_emergencia_nombre} ({ficha.contacto_emergencia_telefono})"
                                 if ficha and ficha.contacto_emergencia_nombre else None)
-    })
+    }
+
+def pesos_de(user_id):
+    registros = (PesoRegistro.query.filter_by(user_id=user_id)
+                 .order_by(PesoRegistro.fecha, PesoRegistro.id).all())
+    return [{'fecha': r.fecha, 'kg': r.kg} for r in registros]
+
+def tomas_de(user_id, dias):
+    dias = max(1, min(dias, 365))
+    desde = (hoy_madrid() - timedelta(days=dias)).isoformat()
+    tomas = (RegistroToma.query
+             .filter(RegistroToma.user_id == user_id, RegistroToma.fecha_prevista >= desde)
+             .order_by(RegistroToma.fecha_prevista.desc(), RegistroToma.hora_prevista.desc()).all())
+    return [{
+        'titulo': t.titulo, 'dosis': t.dosis,
+        'fecha_prevista': t.fecha_prevista, 'hora_prevista': t.hora_prevista,
+        'estado': t.estado,
+        'confirmada_en': (t.confirmada_en.replace(tzinfo=timezone.utc).isoformat()
+                          if t.confirmada_en else None)
+    } for t in tomas]
+
+@app.route('/api/mi-salud', methods=['GET'])
+def mi_salud():
+    usuario, error = paciente_actual()
+    if error: return error
+    return jsonify(datos_salud(usuario))
 
 @app.route('/api/mi-peso', methods=['GET'])
 def listar_peso():
     usuario, error = paciente_actual()
     if error: return error
-    registros = (PesoRegistro.query.filter_by(user_id=usuario.id)
-                 .order_by(PesoRegistro.fecha, PesoRegistro.id).all())
-    return jsonify([{'fecha': r.fecha, 'kg': r.kg} for r in registros])
+    return jsonify(pesos_de(usuario.id))
 
 @app.route('/api/mi-peso', methods=['POST'])
 def anadir_peso():
@@ -515,18 +536,48 @@ def anadir_peso():
 def historial_tomas():
     usuario, error = paciente_actual()
     if error: return error
-    dias = max(1, min(request.args.get('dias', 30, type=int), 365))
-    desde = (hoy_madrid() - timedelta(days=dias)).isoformat()
-    tomas = (RegistroToma.query
-             .filter(RegistroToma.user_id == usuario.id, RegistroToma.fecha_prevista >= desde)
-             .order_by(RegistroToma.fecha_prevista.desc(), RegistroToma.hora_prevista.desc()).all())
-    return jsonify([{
-        'titulo': t.titulo, 'dosis': t.dosis,
-        'fecha_prevista': t.fecha_prevista, 'hora_prevista': t.hora_prevista,
-        'estado': t.estado,
-        'confirmada_en': (t.confirmada_en.replace(tzinfo=timezone.utc).isoformat()
-                          if t.confirmada_en else None)
-    } for t in tomas])
+    return jsonify(tomas_de(usuario.id, request.args.get('dias', 30, type=int)))
+
+# ---------------- SALUD DEL PACIENTE, VISTA DEL SUPERVISOR (solo lectura) ----------------
+def paciente_supervisado_o_403(paciente_id):
+    """PROVISIONAL: P3 define el definitivo con este mismo nombre; cuando lo suba, se borra este.
+    Devuelve (paciente, None) o (None, respuesta_de_error). Un id inexistente y uno ajeno dan el
+    mismo 403, para no revelar qué pacientes existen."""
+    sup = usuario_actual()
+    if not sup: return None, (jsonify({'error': 'No autorizado'}), 401)
+    if sup.rol != 'supervisor': return None, (jsonify({'error': 'Prohibido'}), 403)
+    paciente = db.session.get(User, paciente_id)
+    if not paciente or paciente not in sup.dependientes:
+        return None, (jsonify({'error': 'Prohibido'}), 403)
+    return paciente, None
+
+@app.route('/api/supervisor/pacientes/<int:paciente_id>/salud', methods=['GET'])
+def supervisor_salud(paciente_id):
+    paciente, error = paciente_supervisado_o_403(paciente_id)
+    if error: return error
+    return jsonify(datos_salud(paciente))
+
+@app.route('/api/supervisor/pacientes/<int:paciente_id>/peso', methods=['GET'])
+def supervisor_peso(paciente_id):
+    paciente, error = paciente_supervisado_o_403(paciente_id)
+    if error: return error
+    return jsonify(pesos_de(paciente.id))
+
+@app.route('/api/supervisor/pacientes/<int:paciente_id>/tomas', methods=['GET'])
+def supervisor_tomas(paciente_id):
+    paciente, error = paciente_supervisado_o_403(paciente_id)
+    if error: return error
+    return jsonify(tomas_de(paciente.id, request.args.get('dias', 30, type=int)))
+
+@app.route('/supervisor/salud/<int:paciente_id>')
+def pagina_salud_supervisor(paciente_id):
+    sup = usuario_actual()
+    if not sup or sup.rol != 'supervisor':
+        return redirect(url_for('login'))
+    paciente = db.session.get(User, paciente_id)
+    if not paciente or paciente not in sup.dependientes:
+        return redirect(url_for('supervisor'))
+    return render_template('supervisor_salud.html', usuario=sup, paciente=paciente)
 
 # ---------------- VINCULACIÓN SUPERVISOR <-> PACIENTE (código y QR) ----------------
 def fallos_recientes(user_id, ip):

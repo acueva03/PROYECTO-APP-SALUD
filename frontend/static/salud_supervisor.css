@@ -1,0 +1,27 @@
+/* ==========================================================================
+   SUPERVISOR · pantalla de gráficos de salud.
+   Colores, tarjetas y botones generales están en base.css
+   ========================================================================== */
+.datos-salud {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.datos-salud dt { color: var(--color-texto-suave); font-size: 0.9rem; }
+.datos-salud dd { font-size: 1.15rem; font-weight: 700; }
+
+.grafico { position: relative; height: 260px; margin-top: 1rem; }   /* Chart.js necesita altura fija */
+
+.lista-historial li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+}
+.toma-ok { color: var(--color-ok); }
+.toma-pendiente { color: var(--color-aviso-texto); }
+
+@media (max-width: 480px) {
+    .datos-salud { grid-template-columns: 1fr; }
+}

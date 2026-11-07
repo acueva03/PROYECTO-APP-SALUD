@@ -1,12 +1,26 @@
-// salud.js: pantalla del PACIENTE. Los gráficos y el historial viven en graficos.js (compartido
-// con el supervisor); aquí solo queda lo propio del paciente: sus datos y el formulario de peso.
+// salud.js: pantalla del PACIENTE. Solo muestra sus datos y deja registrar el peso.
+// Los gráficos y el historial de tomas están en la pantalla de salud del supervisor.
+// No necesita Chart.js ni graficos.js: la pantalla del paciente carga lo mínimo.
 (() => {
-    const { hoy, pedirJSON, dibujarPeso, dibujarAdherencia, dibujarHistorial } = window.Graficos;
+    const TIMEOUT_MS = 4000;
 
-    const canvasPeso = document.getElementById('grafico-peso');
-    const avisoPeso = document.getElementById('aviso-grafico');
-    const canvasTomas = document.getElementById('grafico-tomas');
-    const listaHistorial = document.getElementById('lista-historial');
+    const hoy = () => {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    };
+
+    async function pedirJSON(url, opciones = {}) {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
+        try {
+            const r = await fetch(url, { ...opciones, signal: controller.signal });
+            const datos = await r.json();
+            if (!r.ok) throw new Error(datos.error || 'HTTP ' + r.status);
+            return datos;
+        } finally {
+            clearTimeout(t);
+        }
+    }
 
     // ---- Datos de salud ----
     async function cargarDatos() {
@@ -19,13 +33,7 @@
         } catch (e) { /* se queda con los guiones */ }
     }
 
-    // ---- Peso ----
-    async function cargarPeso() {
-        try {
-            dibujarPeso(canvasPeso, avisoPeso, await pedirJSON('/api/mi-peso'), 'Todavía no hay pesajes. Guarda el primero arriba.');
-        } catch (e) {}
-    }
-
+    // ---- Registrar peso ----
     document.getElementById('peso-fecha').value = hoy();
     document.getElementById('peso-fecha').max = hoy();
 
@@ -44,25 +52,12 @@
             msg.textContent = 'Peso guardado';
             msg.className = 'mensaje ok';
             document.getElementById('peso-kg').value = '';
-            cargarPeso();
-            cargarDatos();
+            cargarDatos();          // el "Peso (kg)" y el IMC de arriba se actualizan
         } catch (e) {
             msg.textContent = e.message;
             msg.className = 'mensaje error';
         }
     });
 
-    // ---- Medicamentos ----
-    async function cargarTomas() {
-        try {
-            const tomas = await pedirJSON('/api/mi-historial-tomas?dias=30');
-            dibujarAdherencia(canvasTomas, tomas);
-            dibujarHistorial(listaHistorial, tomas);
-        } catch (e) {}
-    }
-
     cargarDatos();
-    cargarPeso();
-    cargarTomas();
-    setInterval(cargarTomas, 60000);   // para que se refleje una toma recién confirmada
 })();

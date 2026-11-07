@@ -42,6 +42,9 @@
             <p>{% if paciente.edad %}{{ paciente.edad }} años · {% endif %}Paciente en supervisión</p>
         </div>
     </div>
+    <!-- Se abre en otra pestaña a propósito: este panel debe seguir abierto para que suenen las alertas SOS -->
+    <p><a class="btn btn-secundario" style="text-decoration: none;"
+          href="/supervisor/salud/{{ paciente.id }}" target="_blank" rel="noopener">📈 Ver gráficos de salud</a></p>
     {% else %}
     <p class="texto-suave sin-paciente">No tienes ningún paciente vinculado todavía.</p>
     {% endif %}

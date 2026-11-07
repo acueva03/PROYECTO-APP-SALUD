@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block titulo %}Salud de {{ paciente.nombre }} - App Salud{% endblock %}
+{% block css %}<link rel="stylesheet" href="{{ url_for('static', filename='salud_supervisor.css') }}">{% endblock %}
+{% block subtitulo %}Gráficos de salud{% endblock %}
+
+{% block avisos %}
+<div class="banner banner-aviso">
+    Esta pantalla es solo de consulta. Las alertas SOS siguen sonando en la pestaña del panel de supervisión: no la cierres.
+</div>
+{% endblock %}
+
+{% block contenido %}
+<section class="bienvenida">
+    <h2>Salud de {{ paciente.nombre_completo }}</h2>
+    <p>Datos y evolución del paciente. Solo puedes consultarlos, no modificarlos.</p>
+</section>
+
+<!-- DATOS ACTUALES (lo rellena supervisor_salud.js con data-paciente-id) -->
+<section class="tarjeta" id="seccion-salud-supervisor" data-paciente-id="{{ paciente.id }}" aria-labelledby="titulo-datos">
+    <div class="tarjeta-cabecera"><h2 id="titulo-datos">Datos actuales</h2></div>
+    <p id="mensaje-salud" class="mensaje error" role="alert" hidden></p>
+    <dl class="datos-salud">
+        <div><dt>Edad</dt><dd data-campo="edad">—</dd></div>
+        <div><dt>Peso (kg)</dt><dd data-campo="peso">—</dd></div>
+        <div><dt>Altura</dt><dd data-campo="altura">—</dd></div>
+        <div><dt>IMC</dt><dd data-campo="imc">—</dd></div>
+        <div><dt>Grupo sanguíneo</dt><dd data-campo="grupo_sanguineo">—</dd></div>
+        <div><dt>Alergias</dt><dd data-campo="alergias">—</dd></div>
+        <div><dt>Enfermedades crónicas</dt><dd data-campo="enfermedades_cronicas">—</dd></div>
+        <div><dt>Medicación</dt><dd data-campo="medicacion">—</dd></div>
+        <div><dt>Contacto de emergencia</dt><dd data-campo="contacto_emergencia">—</dd></div>
+    </dl>
+</section>
+
+<section class="tarjeta" aria-labelledby="titulo-peso">
+    <div class="tarjeta-cabecera"><h2 id="titulo-peso">Evolución del peso</h2></div>
+    <div class="grafico"><canvas id="grafico-peso" role="img" aria-label="Gráfico de la evolución del peso"></canvas></div>
+    <p id="aviso-grafico" class="texto-suave" hidden></p>
+</section>
+
+<section class="tarjeta" aria-labelledby="titulo-tomas">
+    <div class="tarjeta-cabecera"><h2 id="titulo-tomas">Tomas de los últimos 14 días</h2></div>
+    <div class="grafico"><canvas id="grafico-tomas" role="img" aria-label="Porcentaje de tomas confirmadas por día"></canvas></div>
+</section>
+
+<section class="tarjeta" aria-labelledby="titulo-historial">
+    <div class="tarjeta-cabecera"><h2 id="titulo-historial">Registro de medicamentos</h2></div>
+    <ul id="lista-historial" class="lista-tomas lista-historial"></ul>
+</section>
+{% endblock %}
+
+{% block pie %}Pantalla de consulta para el supervisor{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='graficos.js') }}"></script>
+<script src="{{ url_for('static', filename='supervisor_salud.js') }}"></script>
+{% endblock %}

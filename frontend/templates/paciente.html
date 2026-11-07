@@ -153,14 +153,6 @@
         <button type="submit" class="btn btn-primario">Guardar peso</button>
         <p id="mensaje-peso" class="mensaje" role="status" aria-live="polite"></p>
     </form>
-    <div class="grafico"><canvas id="grafico-peso"></canvas></div>
-    <p id="aviso-grafico" class="texto-suave" hidden></p>
-
-    <h3>Tomas de los últimos 14 días</h3>
-    <div class="grafico"><canvas id="grafico-tomas"></canvas></div>
-
-    <h3>Registro de medicamentos</h3>
-    <ul id="lista-historial" class="lista-alarmas"></ul>
 </section>
 {% endblock %}
 
@@ -168,8 +160,6 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='conexion.js') }}"></script>
-<script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
-<script src="{{ url_for('static', filename='graficos.js') }}"></script> 
 <script src="{{ url_for('static', filename='salud.js') }}"></script>
 <script src="{{ url_for('static', filename='vinculos_paciente.js') }}"></script>
 <script src="{{ url_for('static', filename='reloj.js') }}"></script>
