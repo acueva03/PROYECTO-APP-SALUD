@@ -4,7 +4,7 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'   # ANTES de importar app: nun
 import unittest
 from datetime import timedelta, timezone
 from app import app
-from models import db, User, CodigoVinculo, IntentoVinculo, ahora
+from models import db, User, CodigoVinculo, IntentoVinculo, VinculoLog, ahora
 from vinculos import (ALFABETO, LONGITUD, generar_codigo, normalizar_codigo,
                       formato_valido, hash_codigo, formatear_codigo)
 
@@ -209,6 +209,99 @@ class TestVinculosApi(BaseConBD):
         self.assertEqual(self.canjear(self.cli_alberto, d['codigo']).status_code, 200)
 
 
+class TestDesvincular(BaseConBD):
+    """Caja negra: ver y deshacer vínculos, desde el supervisor y desde el paciente."""
+
+    def vincular(self, cliente):
+        d = self.cli_maria.post('/api/vinculos/codigo').get_json()
+        r = cliente.post('/api/vinculos/canjear', json={'codigo': d['codigo']})
+        self.assertEqual(r.status_code, 200)
+
+    def id_de(self, username):
+        return User.query.filter_by(username=username).one().id
+
+    # ---- Desde el supervisor ----
+    def test_listar_pacientes_vinculados(self):
+        self.assertEqual(self.cli_alberto.get('/api/vinculos/pacientes').get_json(), [])
+        self.vincular(self.cli_alberto)
+        lista = self.cli_alberto.get('/api/vinculos/pacientes').get_json()
+        self.assertEqual([p['nombre'] for p in lista], ['María'])
+
+    def test_supervisor_se_desvincula(self):
+        self.vincular(self.cli_alberto)
+        r = self.cli_alberto.delete('/api/vinculos/pacientes/%d' % self.id_de('maria'))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.dependientes_de('alberto'), [])
+        # Tras desvincularse ya no ve los SOS de la paciente
+        self.cli_maria.post('/api/sos', json={})
+        self.assertEqual(self.cli_alberto.get('/api/mis-alertas').get_json(), [])
+
+    def test_desvincular_no_afecta_a_otro_supervisor(self):
+        self.vincular(self.cli_alberto)
+        self.vincular(self.cli_lucia)
+        self.cli_alberto.delete('/api/vinculos/pacientes/%d' % self.id_de('maria'))
+        self.assertEqual(self.dependientes_de('lucia'), ['maria'])
+
+    def test_desvincular_permisos_y_no_vinculado(self):
+        url = '/api/vinculos/pacientes/%d' % self.id_de('maria')
+        self.assertEqual(self.cli_lucia.delete(url).status_code, 404)              # no estaba vinculada
+        self.assertEqual(app.test_client().delete(url).status_code, 401)           # sin sesión
+        self.assertEqual(self.cli_maria.delete(url).status_code, 403)              # un paciente no puede
+        self.assertEqual(self.cli_alberto.delete('/api/vinculos/pacientes/9999').status_code, 404)
+
+    # ---- Desde el paciente ----
+    def test_paciente_ve_sus_supervisores(self):
+        self.assertEqual(self.cli_maria.get('/api/vinculos/supervisores').get_json(), [])
+        self.vincular(self.cli_alberto)
+        self.vincular(self.cli_lucia)
+        lista = self.cli_maria.get('/api/vinculos/supervisores').get_json()
+        self.assertEqual(sorted(s['nombre'] for s in lista), ['Alberto', 'Lucía'])
+
+    def test_paciente_quita_a_un_supervisor(self):
+        self.vincular(self.cli_alberto)
+        self.vincular(self.cli_lucia)
+        r = self.cli_maria.delete('/api/vinculos/supervisores/%d' % self.id_de('alberto'))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.dependientes_de('alberto'), [])
+        self.assertEqual(self.dependientes_de('lucia'), ['maria'])     # el otro supervisor sigue
+        # Alberto ya no recibe el SOS; Lucía sí
+        self.cli_maria.post('/api/sos', json={})
+        self.assertEqual(self.cli_alberto.get('/api/mis-alertas').get_json(), [])
+        self.assertEqual(len(self.cli_lucia.get('/api/mis-alertas').get_json()), 1)
+
+    def test_paciente_quitar_permisos_y_no_vinculado(self):
+        url = '/api/vinculos/supervisores/%d' % self.id_de('alberto')
+        self.assertEqual(self.cli_maria.delete(url).status_code, 404)              # no estaba vinculado
+        self.assertEqual(app.test_client().delete(url).status_code, 401)           # sin sesión
+        self.assertEqual(self.cli_lucia.delete(url).status_code, 403)              # un supervisor no puede
+        self.assertEqual(self.cli_maria.delete('/api/vinculos/supervisores/9999').status_code, 404)
+
+    def test_se_puede_volver_a_vincular_tras_desvincular(self):
+        self.vincular(self.cli_alberto)
+        self.cli_maria.delete('/api/vinculos/supervisores/%d' % self.id_de('alberto'))
+        self.vincular(self.cli_alberto)                      # con un código nuevo
+        self.assertEqual(self.dependientes_de('alberto'), ['maria'])
+
+    # ---- Historial ----
+    def test_historial_de_vinculos(self):
+        self.vincular(self.cli_alberto)
+        self.cli_alberto.delete('/api/vinculos/pacientes/%d' % self.id_de('maria'))
+        self.vincular(self.cli_alberto)
+        self.cli_maria.delete('/api/vinculos/supervisores/%d' % self.id_de('alberto'))
+        filas = [(l.accion, l.iniciado_por) for l in VinculoLog.query.order_by(VinculoLog.id)]
+        self.assertEqual(filas, [('VINCULADO', 'SUPERVISOR'), ('DESVINCULADO', 'SUPERVISOR'),
+                                 ('VINCULADO', 'SUPERVISOR'), ('DESVINCULADO', 'PACIENTE')])
+
+    # ---- Mensajes claros en lugar de "Prohibido" ----
+    def test_mensajes_de_error_explican_el_motivo(self):
+        r = self.cli_alberto.post('/api/vinculos/codigo')           # un supervisor intenta generar código
+        self.assertEqual(r.status_code, 403)
+        self.assertNotEqual(r.get_json()['error'], 'Prohibido')
+        r = self.cli_maria.post('/api/vinculos/canjear', json={'codigo': 'ABCD-EFGH'})
+        self.assertEqual(r.status_code, 403)
+        self.assertNotEqual(r.get_json()['error'], 'Prohibido')
+
+
 class TestVinculosPaginas(BaseConBD):
     """Pantallas. Estas pruebas pasan cuando estén hechos los pasos 6 y 7."""
 
@@ -229,6 +322,7 @@ class TestVinculosPaginas(BaseConBD):
         r = self.cli_maria.get('/')
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'btn-generar-codigo', r.data)
+        self.assertIn(b'lista-supervisores', r.data)      # el paciente ve quién le supervisa
 
 
 if __name__ == '__main__':

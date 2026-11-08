@@ -165,3 +165,14 @@ class IntentoVinculo(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     ip = db.Column(db.String(45), nullable=True)
     fecha = db.Column(db.DateTime, default=ahora)
+
+# Historial de vínculos y desvinculaciones (son datos de salud: RGPD).
+# iniciado_por dice quién lo hizo: 'SUPERVISOR' (canjeó el código o se desvinculó) o 'PACIENTE' (quitó al supervisor)
+class VinculoLog(db.Model):
+    __tablename__ = 'vinculo_log'
+    id = db.Column(db.Integer, primary_key=True)
+    supervisor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    accion = db.Column(db.String(20), nullable=False)          # 'VINCULADO' o 'DESVINCULADO'
+    iniciado_por = db.Column(db.String(20), nullable=False)    # 'SUPERVISOR' o 'PACIENTE'
+    fecha = db.Column(db.DateTime, default=ahora)

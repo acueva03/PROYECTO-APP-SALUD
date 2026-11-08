@@ -1,6 +1,6 @@
 /* Vinculación supervisor <-> paciente (pantallas del paciente y del supervisor) */
 .bloque-codigo {
-    margin-top: 1.8 rem;
+    margin-top: 1.8rem;
     text-align: center;
 }
 
@@ -31,4 +31,41 @@
     width: 100%;
     max-width: 320px;
     margin: 1rem auto 0;
+}
+
+/* Separación del botón "Generar código" respecto al texto de arriba */
+#btn-generar-codigo {
+    margin-top: 1.25rem;
+}
+
+#mensaje-vinculo {
+    margin-top: 0.75rem;
+}
+
+/* Listas de vinculados: pacientes (pantalla del supervisor) y supervisores (pantalla del paciente) */
+.lista-vinculos {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.item-vinculo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.item-vinculo:last-child {
+    border-bottom: none;
+}
+
+.btn-desvincular {
+    min-height: 44px;          /* tamaño táctil mínimo (accesibilidad) */
+}
+
+#seccion-vinculo h3 {
+    margin-top: 1.5rem;
 }

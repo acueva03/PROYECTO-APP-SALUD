@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone, date
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from sqlalchemy import inspect, text, or_
 from models import (db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma,
-                    PesoRegistro, CodigoVinculo, IntentoVinculo, ahora, hoy_madrid, ZONA)
+                    PesoRegistro, CodigoVinculo, IntentoVinculo, VinculoLog, ahora, hoy_madrid, ZONA)
 # NUEVO: reglas de usuario y contraseña
 from validaciones import (normalizar_username, validar_username,
                           validar_password, username_desde_nombre)
@@ -580,6 +580,33 @@ def pagina_salud_supervisor(paciente_id):
     return render_template('supervisor_salud.html', usuario=sup, paciente=paciente)
 
 # ---------------- VINCULACIÓN SUPERVISOR <-> PACIENTE (código y QR) ----------------
+# Mensajes claros: así un "Prohibido" no confunde (lo típico en pruebas es tener dos cuentas
+# abiertas en el mismo navegador: la cookie de sesión es una sola y la última en entrar gana)
+MSG_SESION_CADUCADA = 'Tu sesión ha caducado. Vuelve a iniciar sesión.'
+MSG_NO_ES_SUPERVISOR = ('Esta acción es solo para cuentas de supervisor. Si tienes varias pestañas abiertas, '
+                        'es posible que hayas iniciado sesión con otra cuenta en este mismo navegador: recarga la página.')
+MSG_NO_ES_PACIENTE = ('Esta acción es solo para cuentas de paciente. Si tienes varias pestañas abiertas, '
+                      'es posible que hayas iniciado sesión con otra cuenta en este mismo navegador: recarga la página.')
+
+def supervisor_o_error():
+    """Devuelve (supervisor, None) o (None, respuesta_de_error) con un mensaje que explica el motivo."""
+    usuario = usuario_actual()
+    if not usuario: return None, (jsonify({'error': MSG_SESION_CADUCADA}), 401)
+    if usuario.rol != 'supervisor': return None, (jsonify({'error': MSG_NO_ES_SUPERVISOR}), 403)
+    return usuario, None
+
+def paciente_o_error():
+    """Devuelve (paciente, None) o (None, respuesta_de_error) con un mensaje que explica el motivo."""
+    usuario = usuario_actual()
+    if not usuario: return None, (jsonify({'error': MSG_SESION_CADUCADA}), 401)
+    if usuario.rol != 'dependiente': return None, (jsonify({'error': MSG_NO_ES_PACIENTE}), 403)
+    return usuario, None
+
+def anotar_vinculo(accion, supervisor_id, paciente_id, iniciado_por):
+    """Apunta en el historial un vínculo o desvinculación (se confirma con el commit de quien llama)."""
+    db.session.add(VinculoLog(supervisor_id=supervisor_id, paciente_id=paciente_id,
+                              accion=accion, iniciado_por=iniciado_por))
+
 def fallos_recientes(user_id, ip):
     """Canjes fallidos en los últimos 10 min de esta cuenta O de esta IP."""
     desde = (ahora() - timedelta(minutes=VENTANA_MINUTOS)).replace(tzinfo=None)
@@ -591,7 +618,7 @@ def fallos_recientes(user_id, ip):
 @app.route('/api/vinculos/codigo', methods=['POST'])
 def crear_codigo_vinculo():
     """El PACIENTE genera un código de un solo uso, válido 10 minutos."""
-    paciente, error = paciente_actual()
+    paciente, error = paciente_o_error()
     if error: return error
 
     # Un código nuevo invalida los anteriores que no se hubieran usado
@@ -621,9 +648,8 @@ def crear_codigo_vinculo():
 @app.route('/api/vinculos/canjear', methods=['POST'])
 def canjear_codigo_vinculo():
     """El SUPERVISOR introduce el código y queda vinculado con el paciente."""
-    sup = usuario_actual()
-    if not sup: return jsonify({'error': 'No autorizado'}), 401
-    if sup.rol != 'supervisor': return jsonify({'error': 'Prohibido'}), 403
+    sup, error = supervisor_o_error()
+    if error: return error
 
     ip = request.remote_addr or ''
     # Se comprueba ANTES de mirar el código: durante el bloqueo ni el código bueno sirve
@@ -657,11 +683,57 @@ def canjear_codigo_vinculo():
     ya_vinculado = paciente in sup.dependientes
     if not ya_vinculado:
         sup.dependientes.append(paciente)
+        anotar_vinculo('VINCULADO', sup.id, paciente.id, 'SUPERVISOR')
     if not guardar_en_bd(): return jsonify({'error': 'No se pudo completar la vinculación'}), 500
 
     mensaje = ('Ya estabas vinculado con ' if ya_vinculado else 'Vinculado correctamente con ') + paciente.nombre_completo
     return jsonify({'mensaje': mensaje,
                     'paciente': {'id': paciente.id, 'nombre': paciente.nombre_completo}}), 200
+
+# ---- Ver y deshacer vínculos. Cada parte solo puede tocar SU lado del vínculo ----
+@app.route('/api/vinculos/pacientes', methods=['GET'])
+def mis_pacientes_vinculados():
+    """SUPERVISOR: lista de pacientes con los que está vinculado."""
+    sup, error = supervisor_o_error()
+    if error: return error
+    return jsonify([{'id': p.id, 'nombre': p.nombre_completo} for p in sup.dependientes])
+
+@app.route('/api/vinculos/pacientes/<int:paciente_id>', methods=['DELETE'])
+def desvincular_paciente(paciente_id):
+    """SUPERVISOR: deja de supervisar a un paciente. Solo quita SU vínculo; otros supervisores no se tocan."""
+    sup, error = supervisor_o_error()
+    if error: return error
+
+    paciente = db.session.get(User, paciente_id)
+    if not paciente or paciente not in sup.dependientes:
+        return jsonify({'error': 'No estás vinculado con ese paciente'}), 404
+
+    sup.dependientes.remove(paciente)
+    anotar_vinculo('DESVINCULADO', sup.id, paciente.id, 'SUPERVISOR')
+    if not guardar_en_bd(): return jsonify({'error': 'No se pudo desvincular. Inténtalo de nuevo.'}), 500
+    return jsonify({'mensaje': 'Te has desvinculado de ' + paciente.nombre_completo}), 200
+
+@app.route('/api/vinculos/supervisores', methods=['GET'])
+def mis_supervisores():
+    """PACIENTE: quién le supervisa (el paciente debe poder saberlo siempre)."""
+    paciente, error = paciente_o_error()
+    if error: return error
+    return jsonify([{'id': s.id, 'nombre': s.nombre_completo} for s in paciente.supervisores])
+
+@app.route('/api/vinculos/supervisores/<int:supervisor_id>', methods=['DELETE'])
+def quitar_supervisor(supervisor_id):
+    """PACIENTE: revoca el acceso de un supervisor (el supervisor deja de ver sus datos y avisos)."""
+    paciente, error = paciente_o_error()
+    if error: return error
+
+    sup = db.session.get(User, supervisor_id)
+    if not sup or sup not in paciente.supervisores:
+        return jsonify({'error': 'Ese supervisor no está vinculado contigo'}), 404
+
+    paciente.supervisores.remove(sup)
+    anotar_vinculo('DESVINCULADO', sup.id, paciente.id, 'PACIENTE')
+    if not guardar_en_bd(): return jsonify({'error': 'No se pudo quitar al supervisor. Inténtalo de nuevo.'}), 500
+    return jsonify({'mensaje': sup.nombre_completo + ' ya no es tu supervisor'}), 200
 
 @app.route('/vincular')
 def pagina_vincular():

@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='supervisor.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vinculos.css') }}">
 {% endblock %}
-{% block subtitulo %}Vincular un paciente{% endblock %}
+{% block subtitulo %}Gestionar pacientes{% endblock %}
 {% block clase_contenedor %}contenedor-estrecho{% endblock %}
 
 {% block contenido %}
@@ -26,6 +26,12 @@
     </form>
 
     <div id="lector-qr" class="lector-qr" hidden></div>
+</section>
+
+<section class="tarjeta">
+    <div class="tarjeta-cabecera"><h2>Pacientes vinculados</h2></div>
+    <ul id="lista-pacientes" class="lista-vinculos"></ul>
+    <p id="mensaje-pacientes" class="mensaje" role="status" aria-live="polite"></p>
 </section>
 {% endblock %}
 
