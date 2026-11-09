@@ -120,7 +120,9 @@ btnSonido.addEventListener('click', async () => {
         alarmaSonora.pause();
         alarmaSonora.currentTime = 0;
         avisoSonido.hidden = true;
-    } catch (error) {}
+    } catch (error) {
+        console.warn("No se pudo reproducir o pausar el sonido:", error);
+    }
     sincronizarSonido();                
 });
 
@@ -204,7 +206,9 @@ async function consultarTomas() {
         }
         contadorTomas.textContent = tomas.length + (tomas.length === 1 ? ' pendiente' : ' pendientes');
         contadorTomas.classList.toggle('con-pendientes', tomas.length > 0);
-    } catch (error) {}
+    } catch (error) {
+        console.warn('Error al actualizar el contador de tomas:', error);
+    }
 }
 
 consultarTomas();
