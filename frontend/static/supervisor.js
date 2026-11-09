@@ -11,6 +11,12 @@ const avisoSonido = document.getElementById('aviso-sonido');
 const btnSonido = document.getElementById('btn-activar-sonido');
 const avisoConexion = document.getElementById('aviso-conexion');
 const htmlTodoBien = bloque.innerHTML;
+// banner de SOS que se ve en todas las pestañas del panel
+const bannerSOS = document.getElementById('banner-sos');
+const textoBannerSOS = document.getElementById('texto-banner-sos');
+document.getElementById('btn-ver-alertas').addEventListener('click', () => {
+    if (window.PanelPacientes) window.PanelPacientes.abrir('resumen');
+});
 
 const estadoSistema = document.getElementById('estado-sistema');
 const puntoSistema = document.getElementById('punto-sistema');
@@ -31,12 +37,24 @@ function marcarConexion(ok) {
 
 function actualizarEstado(numAlertas) {
     if (numAlertas > 0) {
-        estadoPaciente.textContent = '¡Alerta SOS activa!';
+        estadoPaciente.textContent = numAlertas === 1 ? '¡Alerta SOS activa!' : '¡' + numAlertas + ' alertas SOS activas!';
         iconoEstado.textContent = '⚠';
     } else {
         estadoPaciente.textContent = 'Sin alertas activas';
         iconoEstado.textContent = '✓';
     }
+}
+
+// Muestra u oculta el banner con los nombres de TODOS los pacientes con SOS activo
+function actualizarBannerSOS(alertas) {
+    if (alertas.length === 0) {
+        bannerSOS.hidden = true;
+        return;
+    }
+    const nombres = [...new Set(alertas.map(a => a.dependiente))];
+    const texto = '⚠ ¡SOS activo! ' + nombres.join(', ');
+    if (textoBannerSOS.textContent !== texto) textoBannerSOS.textContent = texto;
+    bannerSOS.hidden = false;
 }
 
 const hora = new Date().getHours();
@@ -57,6 +75,17 @@ function crearTarjetaAlerta(alerta) {
     boton.className = 'btn-atender';
     boton.addEventListener('click', () => atenderAlerta(alerta.alerta_id));
     div.append(titulo, hora, boton);
+    // NUEVO (parte 3): botón para ir a la pestaña de ese paciente
+    if (alerta.dependiente_id !== undefined) {
+        const ir = document.createElement('button');
+        ir.type = 'button';
+        ir.textContent = 'Ir a ' + alerta.dependiente;
+        ir.className = 'btn btn-secundario btn-ir-paciente';
+        ir.addEventListener('click', () => {
+            if (window.PanelPacientes) window.PanelPacientes.abrir(alerta.dependiente_id);
+        });
+        div.append(ir);
+    }
     return div;
 }
 
@@ -91,7 +120,9 @@ btnSonido.addEventListener('click', async () => {
         alarmaSonora.pause();
         alarmaSonora.currentTime = 0;
         avisoSonido.hidden = true;
-    } catch (error) {}
+    } catch (error) {
+        console.warn("No se pudo reproducir o pausar el sonido:", error);
+    }
     sincronizarSonido();                
 });
 
@@ -119,6 +150,7 @@ async function consultarAlertas() {
         if (revision) revision.textContent = 'Última revisión: ' + horaAhora();
 
         hayAlertas = alertas.length > 0;
+        actualizarBannerSOS(alertas);
         sincronizarSonido();
     } catch (error) {
         fallosSeguidos++;
@@ -174,7 +206,9 @@ async function consultarTomas() {
         }
         contadorTomas.textContent = tomas.length + (tomas.length === 1 ? ' pendiente' : ' pendientes');
         contadorTomas.classList.toggle('con-pendientes', tomas.length > 0);
-    } catch (error) {}
+    } catch (error) {
+        console.warn('Error al actualizar el contador de tomas:', error);
+    }
 }
 
 consultarTomas();

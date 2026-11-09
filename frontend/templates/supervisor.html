@@ -19,115 +19,173 @@
 <div id="aviso-conexion" class="banner banner-peligro" role="alert" hidden>
     ⚠ Sin conexión con el servidor: puede que no veas alertas nuevas.
 </div>
+
+<!-- NUEVO (parte 3): banner de SOS. Está FUERA de las pestañas a propósito: se ve estés donde estés.
+     Lo rellena supervisor.js con los nombres de TODOS los pacientes con SOS activo -->
+<div id="banner-sos" class="banner banner-peligro banner-sos" role="alert" hidden>
+    <span id="texto-banner-sos"></span>
+    <button id="btn-ver-alertas" class="btn btn-secundario" type="button">Ver alertas</button>
+</div>
 {% endblock %}
 
 {% block contenido %}
 <!-- BIENVENIDA -->
 <section class="bienvenida">
     <h2><span id="saludo">Hola</span>, {{ usuario.nombre }} 👋</h2>
-    <p>Consulta aquí el estado de tu familiar y sus alertas.</p>
+    <p>Consulta aquí el estado de tus pacientes y sus alertas.</p>
 </section>
 
-<!-- INFORMACIÓN DEL PACIENTE -->
-<section class="tarjeta">
-    <div class="tarjeta-cabecera">
-        <h2>Paciente supervisado</h2>
-    </div>
+<!-- NAVEGACIÓN: "Resumen" + un chip por paciente + "Vincular".
+     Se genera aquí con Jinja; supervisor_pacientes.js la hace funcionar.
+     El ⚠ SOS lleva icono y texto: el estado no depende solo del color -->
+<nav class="chips" aria-label="Pacientes">
+    <button type="button" class="chip activo" data-vista="resumen" aria-current="true">Resumen</button>
+    {% for p in pacientes %}
+    <button type="button" class="chip" data-vista="paciente-{{ p.id }}" data-paciente-id="{{ p.id }}">
+        {{ p.nombre }} <span class="chip-sos" hidden>⚠ SOS</span>
+    </button>
+    {% endfor %}
+    <!-- Mismo comportamiento que antes: se abre en esta pestaña (supervisor.js avisa antes de salir) -->
+    <a class="chip chip-vincular" href="/vincular" title="Vincular o desvincular pacientes">+ Vincular</a>
+</nav>
 
-    {% if paciente %}
-    <div class="paciente-info">
-        <div class="avatar">{{ paciente.iniciales }}</div>
-        <div class="datos-paciente">
-            <h3>{{ paciente.nombre_completo }}</h3>
-            <p>{% if paciente.edad %}{{ paciente.edad }} años · {% endif %}Paciente en supervisión</p>
+<!-- ======================= VISTA: RESUMEN ======================= -->
+<div class="vista" id="vista-resumen" data-vista="resumen">
+
+    <!-- ALERTAS SOS (supervisor.js dibuja aquí una tarjeta por cada SOS activo, de cualquier paciente) -->
+    <section class="tarjeta">
+        <div class="tarjeta-cabecera">
+            <h2>Estado de las alertas</h2>
+            <span class="insignia contador-alertas">0 alertas</span>
         </div>
-    </div>
-    <!-- Se abre en otra pestaña a propósito: este panel debe seguir abierto para que suenen las alertas SOS -->
-    <p><a class="btn btn-secundario" style="text-decoration: none;"
-          href="/supervisor/salud/{{ paciente.id }}" target="_blank" rel="noopener">📈 Ver gráficos de salud</a></p>
-    {% else %}
-    <p class="texto-suave sin-paciente">No tienes ningún paciente vinculado todavía.</p>
-    {% endif %}
-    <p><a class="btn btn-secundario" style="text-decoration: none;" href="/vincular">👥 Vincular o desvincular pacientes</a></p>
 
-    <!-- Estos elementos los rellena supervisor.js: deben existir siempre -->
-    <div class="datos-extra">
-        <div class="dato">
-            <span class="icono">🕐</span>
-            <div>
-                <span>Última comprobación del servidor</span>
-                <strong id="ultima-comprobacion">—</strong>
+        <!-- supervisor.js guarda este contenido y lo restaura cuando no hay alertas -->
+        <div class="estado-alertas" role="alert" aria-live="assertive">
+            <div class="icono-correcto">✓</div>
+            <h3>Todo está bien</h3>
+            <p>No hay alertas activas en este momento.</p>
+            <span class="ultima-revision">Última revisión: ahora</span>
+        </div>
+    </section>
+
+    <!-- TARJETAS DE PACIENTES (las pinta supervisor_pacientes.js) -->
+    <section class="tarjeta">
+        <div class="tarjeta-cabecera">
+            <h2>Mis pacientes</h2>
+        </div>
+        {% if pacientes %}
+        <div id="tarjetas-pacientes" class="tarjetas-pacientes"></div>
+        {% else %}
+        <p class="texto-suave sin-paciente">No tienes ningún paciente vinculado todavía.</p>
+        <p><a class="btn btn-primario" href="/vincular">👥 Vincular un paciente</a></p>
+        {% endif %}
+        <p id="aviso-lista-cambiada" class="mensaje error" role="alert" hidden>
+            Tu lista de pacientes ha cambiado. Recarga la página (F5) para verla actualizada.
+        </p>
+    </section>
+
+    <!-- ESTADO GENERAL: estos elementos los rellena supervisor.js; deben existir siempre -->
+    <section class="tarjeta">
+        <div class="tarjeta-cabecera">
+            <h2>Estado general</h2>
+        </div>
+        <div class="datos-extra">
+            <div class="dato">
+                <span class="icono">🕐</span>
+                <div>
+                    <span>Última comprobación del servidor</span>
+                    <strong id="ultima-comprobacion">—</strong>
+                </div>
+            </div>
+
+            <div class="dato">
+                <span class="icono" id="icono-estado">…</span>
+                <div>
+                    <span>Alertas</span>
+                    <strong id="estado-paciente">Comprobando…</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RECORDATORIOS SIN CONFIRMAR (de todos los pacientes; supervisor.js ya pone el nombre en cada fila) -->
+    <section class="tarjeta">
+        <div class="tarjeta-cabecera">
+            <h2>Recordatorios sin confirmar</h2>
+            <span class="insignia contador-tomas" id="contador-tomas">0 pendientes</span>
+        </div>
+        <ul id="lista-tomas" class="lista-tomas"></ul>
+    </section>
+
+    <!-- AVISO INFORMATIVO -->
+    <section class="aviso">
+        <span class="aviso-icono">i</span>
+        <p>Las alertas aparecerán aquí cuando un paciente necesite asistencia.</p>
+    </section>
+</div>
+
+<!-- ======================= VISTAS: UNA POR PACIENTE ======================= -->
+{% for p in pacientes %}
+<div class="vista" id="vista-paciente-{{ p.id }}" data-vista="paciente-{{ p.id }}" data-paciente-id="{{ p.id }}" hidden>
+    <section class="tarjeta">
+        <div class="paciente-info">
+            <div class="avatar" aria-hidden="true">{{ p.iniciales }}</div>
+            <div class="datos-paciente">
+                <h3>{{ p.nombre_completo }}</h3>
+                <p>{% if p.edad %}{{ p.edad }} años · {% endif %}<span data-estado-paciente>Comprobando…</span></p>
             </div>
         </div>
 
-        <div class="dato">
-            <span class="icono" id="icono-estado">…</span>
-            <div>
-                <span>Estado</span>
-                <strong id="estado-paciente">Comprobando…</strong>
-            </div>
-        </div>
-    </div>
-</section>
+        <!-- Subpestañas del paciente -->
+        <nav class="subpestanas" aria-label="Secciones de {{ p.nombre }}">
+            <button type="button" class="subpestana activo" data-sub="alertas" aria-current="true">Alertas</button>
+            <button type="button" class="subpestana" data-sub="medicacion">Medicación</button>
+            <button type="button" class="subpestana" data-sub="salud">Salud</button>
+            <button type="button" class="subpestana" data-sub="ficha">Ficha médica</button>
+        </nav>
 
-<!-- ALERTAS SOS -->
-<section class="tarjeta">
-    <div class="tarjeta-cabecera">
-        <h2>Estado de las alertas</h2>
-        <span class="insignia contador-alertas">0 alertas</span>
-    </div>
+        <p class="mensaje error" data-mensaje role="alert" hidden></p>
 
-    <!-- supervisor.js guarda este contenido y lo restaura cuando no hay alertas -->
-    <div class="estado-alertas" role="alert" aria-live="assertive">
-        <div class="icono-correcto">✓</div>
-        <h3>Todo está bien</h3>
-        <p>No hay alertas activas en este momento.</p>
-        <span class="ultima-revision">Última revisión: ahora</span>
-    </div>
-</section>
-
-<!-- RECORDATORIOS SIN CONFIRMAR -->
-<section class="tarjeta">
-    <div class="tarjeta-cabecera">
-        <h2>Recordatorios sin confirmar</h2>
-        <span class="insignia contador-tomas" id="contador-tomas">0 pendientes</span>
-    </div>
-    <ul id="lista-tomas" class="lista-tomas"></ul>
-</section>
-
-<!-- ACTIVIDAD RECIENTE -->
-<section class="tarjeta">
-    <div class="tarjeta-cabecera">
-        <h2>Actividad reciente</h2>
-    </div>
-
-    <div class="actividad">
-        <div class="actividad-item">
-            <div class="actividad-icono conectado">✓</div>
-            <div class="actividad-texto">
-                <strong>{% if paciente %}{{ paciente.nombre }}: aplicación en funcionamiento{% else %}Sin paciente vinculado{% endif %}</strong>
-                <span>La aplicación está funcionando correctamente</span>
-            </div>
+        <div class="subvista" data-sub="alertas">
+            <ul class="lista-tomas" data-lista="alertas"></ul>
         </div>
 
-        <div class="actividad-item">
-            <div class="actividad-icono sistema">●</div>
-            <div class="actividad-texto">
-                <strong>Sistema activo</strong>
-                <span>Conexión establecida correctamente</span>
-            </div>
+        <div class="subvista" data-sub="medicacion" hidden>
+            <h3>Recordatorios sin confirmar</h3>
+            <ul class="lista-tomas" data-lista="pendientes"></ul>
+            <h3>Alarmas programadas</h3>
+            <ul class="lista-tomas" data-lista="alarmas"></ul>
         </div>
-    </div>
-</section>
 
-<!-- AVISO INFORMATIVO -->
-<section class="aviso">
-    <span class="aviso-icono">i</span>
-    <p>Las alertas aparecerán aquí cuando el paciente necesite asistencia.</p>
-</section>
+        <div class="subvista" data-sub="salud" hidden>
+            <dl class="datos-salud">
+                <div><dt>Edad</dt><dd data-campo="edad">—</dd></div>
+                <div><dt>Peso (kg)</dt><dd data-campo="peso">—</dd></div>
+                <div><dt>Altura</dt><dd data-campo="altura">—</dd></div>
+                <div><dt>IMC</dt><dd data-campo="imc">—</dd></div>
+            </dl>
+            <!-- HUECO PARA P4: aquí irán los gráficos de peso y adherencia.
+                 De momento, enlace a la pantalla de salud (en otra pestaña para no cerrar este panel) -->
+            <p><a class="btn btn-secundario" style="text-decoration: none;"
+                  href="/supervisor/salud/{{ p.id }}" target="_blank" rel="noopener">📈 Ver gráficos de salud</a></p>
+        </div>
 
+        <div class="subvista" data-sub="ficha" hidden>
+            <dl class="datos-salud">
+                <div><dt>Grupo sanguíneo</dt><dd data-campo="grupo_sanguineo">—</dd></div>
+                <div><dt>Alergias</dt><dd data-campo="alergias">—</dd></div>
+                <div><dt>Enfermedades crónicas</dt><dd data-campo="enfermedades_cronicas">—</dd></div>
+                <div><dt>Medicación</dt><dd data-campo="medicacion">—</dd></div>
+                <div><dt>Contacto de emergencia</dt><dd data-campo="contacto_emergencia">—</dd></div>
+            </dl>
+        </div>
+    </section>
+</div>
+{% endfor %}
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='supervisor.js') }}"></script>
+<!-- NUEVO (parte 3): va DESPUÉS de supervisor.js porque usa su función atenderAlerta -->
+<script src="{{ url_for('static', filename='supervisor_pacientes.js') }}"></script>
 {% endblock %}
