@@ -214,3 +214,139 @@
 @media (max-width: 600px) {
     .datos-extra { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   PARTE 3: supervisor con varios pacientes (pestañas, tarjetas, banner SOS)
+   ========================================================================== */
+
+/* ---------- Pestañas (chips) y subpestañas ---------- */
+.chips,
+.subpestanas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.chips { margin-bottom: 1.25rem; }
+.subpestanas { margin: 1.25rem 0 1rem; }
+
+.chip,
+.subpestana {
+    min-height: 44px;                  /* tamaño táctil mínimo (accesibilidad) */
+    padding: 0.5rem 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--color-primario);
+    background-color: #FFFFFF;
+    border: 2px solid var(--color-primario);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.chip:hover,
+.subpestana:hover { background-color: var(--color-primario-suave); }
+
+.chip.activo,
+.subpestana.activo {
+    background-color: var(--color-primario);
+    color: #FFFFFF;
+}
+
+.chip-vincular { border-style: dashed; }
+
+/* ⚠ SOS dentro del chip: icono + texto, no solo color */
+.chip-sos {
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-peligro-oscuro);
+    background-color: var(--color-peligro-fondo);
+    border: 1px solid var(--color-peligro);
+    border-radius: 999px;
+}
+
+/* ---------- Tarjetas del Resumen ---------- */
+.tarjetas-pacientes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.tarjeta-paciente {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 2px solid var(--color-borde);
+    border-radius: var(--radio-tarjeta);
+}
+
+.tarjeta-paciente.con-sos {
+    border-color: var(--color-peligro);
+    background-color: var(--color-peligro-fondo);
+}
+
+.tarjeta-paciente-cab {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.tarjeta-paciente h3 { margin: 0; }                 /* anula el margen de ".tarjeta h3" */
+
+.estado-paciente { font-weight: 800; }
+.estado-paciente.ok  { color: var(--color-ok); }
+.estado-paciente.sos { color: var(--color-peligro-oscuro); }
+
+.tarjeta-paciente .btn {
+    min-height: 44px;
+    margin-top: auto;
+}
+
+/* ---------- Vista de un paciente ---------- */
+.subvista h3:first-child { margin-top: 0; }
+
+.datos-salud {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.datos-salud dt { color: var(--color-texto-suave); font-size: 0.9rem; }
+.datos-salud dd { font-size: 1.15rem; font-weight: 700; }
+
+@media (max-width: 480px) {
+    .datos-salud { grid-template-columns: 1fr; }
+}
+
+/* ---------- Varios SOS a la vez ---------- */
+.estado-alertas.alerta-activa > div + div {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--color-peligro);
+}
+
+.btn-ir-paciente {
+    min-height: 44px;
+    margin-top: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* Banner de SOS: pegado arriba para verlo en cualquier pestaña, aunque se haga scroll */
+.banner-sos {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 1.2rem;
+}
+
+.banner-sos .btn { min-height: 44px; }

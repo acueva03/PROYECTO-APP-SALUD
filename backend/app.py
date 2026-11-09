@@ -13,6 +13,7 @@ from esquema import comprobar_esquema
 from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_codigo,
                       formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
                       VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
+from supervisor_bp import supervisor_bp, paciente_supervisado_o_403
 
 app = Flask(__name__, 
             template_folder='../frontend/templates', 
@@ -33,6 +34,8 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 db.init_app(app)
 
+app.register_blueprint(supervisor_bp)      # activa las rutas de supervisor_bp.py
+
 with app.app_context(): 
     db.create_all()
 
@@ -43,7 +46,8 @@ def actualizar_columnas():
                    ('dosis', 'VARCHAR(50)'),
                    ('dias_semana', 'VARCHAR(20)')],
         'registros_toma': [('dosis', 'VARCHAR(50)')],
-        'users': [('username', 'VARCHAR(50)')],                       # NUEVO
+        'users': [('username', 'VARCHAR(50)'),
+          ('password_hash', 'VARCHAR(256)')],                       # NUEVO 
     }
     inspector = inspect(db.engine)
     with db.engine.begin() as con:
@@ -244,9 +248,9 @@ def supervisor():
     if 'user_id' not in session or session.get('rol') != 'supervisor':
         return redirect(url_for('login'))
     usuario = db.session.get(User, session['user_id'])
-    # De momento el panel muestra un solo paciente: el primero vinculado
-    paciente = usuario.dependientes[0] if usuario.dependientes else None
-    return render_template('supervisor.html', usuario=usuario, paciente=paciente)
+       # CAMBIADO: se pasan TODOS los pacientes, por orden alfabético
+    pacientes = sorted(usuario.dependientes, key=lambda p: p.nombre_completo.lower())
+    return render_template('supervisor.html', usuario=usuario, pacientes=pacientes)
 
 @app.route('/api/alarmas', methods=['POST'])
 def crear_alarma():
@@ -319,7 +323,7 @@ def alertas_activas():
     for dep in supervisor.dependientes:
         for a in dep.alertas_sos:
             if a.estado == 'ACTIVA':
-                resultado.append({'alerta_id': a.id, 'dependiente': dep.nombre,
+                resultado.append({'alerta_id': a.id, 'dependiente': dep.nombre, 'dependiente_id': dep.id,
                   'fecha_hora': a.fecha_hora.replace(tzinfo=timezone.utc).isoformat()})
     return jsonify(resultado)
 
@@ -446,6 +450,7 @@ def tomas_supervisor():
         for t in tomas_pendientes_de(dep.id, 24):
             d = toma_a_dict(t)
             d['dependiente'] = dep.nombre
+            d['dependiente_id'] = dep.id      
             resultado.append(d)
     return jsonify(resultado)
 
@@ -539,17 +544,6 @@ def historial_tomas():
     return jsonify(tomas_de(usuario.id, request.args.get('dias', 30, type=int)))
 
 # ---------------- SALUD DEL PACIENTE, VISTA DEL SUPERVISOR (solo lectura) ----------------
-def paciente_supervisado_o_403(paciente_id):
-    """PROVISIONAL: P3 define el definitivo con este mismo nombre; cuando lo suba, se borra este.
-    Devuelve (paciente, None) o (None, respuesta_de_error). Un id inexistente y uno ajeno dan el
-    mismo 403, para no revelar qué pacientes existen."""
-    sup = usuario_actual()
-    if not sup: return None, (jsonify({'error': 'No autorizado'}), 401)
-    if sup.rol != 'supervisor': return None, (jsonify({'error': 'Prohibido'}), 403)
-    paciente = db.session.get(User, paciente_id)
-    if not paciente or paciente not in sup.dependientes:
-        return None, (jsonify({'error': 'Prohibido'}), 403)
-    return paciente, None
 
 @app.route('/api/supervisor/pacientes/<int:paciente_id>/salud', methods=['GET'])
 def supervisor_salud(paciente_id):
