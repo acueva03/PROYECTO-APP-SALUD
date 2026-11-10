@@ -158,6 +158,48 @@
         <p id="mensaje-peso" class="mensaje" role="status" aria-live="polite"></p>
     </form>
 </section>
+<!-- EDITAR MIS DATOS (lo controla ficha.js) -->
+<section class="tarjeta" id="seccion-ficha" aria-labelledby="titulo-ficha">
+    <div class="tarjeta-cabecera"><h2 id="titulo-ficha">Editar mis datos</h2></div>
+    <p class="texto-suave">Estos datos los verá tu supervisor y servirán en una emergencia. Déjalos en blanco si no quieres indicarlos.</p>
+
+    <form id="form-ficha" class="formulario">
+        <label for="ficha-edad">Edad</label>
+        <input id="ficha-edad" type="number" min="0" max="120" step="1">
+
+        <label for="ficha-altura">Altura (cm)</label>
+        <input id="ficha-altura" type="number" min="50" max="250" step="0.1">
+
+        <label for="ficha-telefono">Mi teléfono</label>
+        <input id="ficha-telefono" type="text" inputmode="tel" maxlength="20" autocomplete="tel">
+
+        <label for="ficha-grupo_sanguineo">Grupo sanguíneo</label>
+        <select id="ficha-grupo_sanguineo">
+            <option value="">No lo sé / prefiero no decirlo</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+        </select>
+
+        <label for="ficha-alergias">Alergias</label>
+        <input id="ficha-alergias" type="text" maxlength="500" placeholder="Ej: penicilina, frutos secos">
+
+        <label for="ficha-enfermedades_cronicas">Enfermedades crónicas</label>
+        <input id="ficha-enfermedades_cronicas" type="text" maxlength="500" placeholder="Ej: hipertensión, diabetes">
+
+        <label for="ficha-medicacion">Medicación habitual</label>
+        <input id="ficha-medicacion" type="text" maxlength="500" placeholder="Ej: enalapril 5 mg">
+
+        <label for="ficha-contacto_emergencia_nombre">Contacto de emergencia: nombre</label>
+        <input id="ficha-contacto_emergencia_nombre" type="text" maxlength="120">
+
+        <label for="ficha-contacto_emergencia_telefono">Contacto de emergencia: teléfono</label>
+        <input id="ficha-contacto_emergencia_telefono" type="text" inputmode="tel" maxlength="20">
+
+        <button type="submit" class="btn btn-primario">Guardar mis datos</button>
+        <p id="mensaje-ficha" class="mensaje" role="status" aria-live="polite"></p>
+    </form>
+</section>
+
 {% endblock %}
 
 {% block pie %}Al pulsar el botón SOS, tu supervisor recibirá un aviso inmediato.{% endblock %}
@@ -167,4 +209,5 @@
 <script src="{{ url_for('static', filename='salud.js') }}"></script>
 <script src="{{ url_for('static', filename='vinculos_paciente.js') }}"></script>
 <script src="{{ url_for('static', filename='reloj.js') }}"></script>
+<script src="{{ url_for('static', filename='ficha.js') }}"></script>
 {% endblock %}

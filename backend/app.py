@@ -9,6 +9,7 @@ from models import (db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, Reg
 # NUEVO: reglas de usuario y contraseña
 from validaciones import (normalizar_username, validar_username,
                           validar_password, username_desde_nombre)
+from ficha import validar_ficha
 from esquema import comprobar_esquema
 from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_codigo,
                       formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
@@ -536,6 +537,39 @@ def anadir_peso():
         usuario.peso = round(kg, 1)
     if not guardar_en_bd(): return jsonify({'error': 'No se pudo guardar el peso'}), 500
     return jsonify({'mensaje': 'Peso guardado'}), 201
+
+# ---------------- EDITAR FICHA MÉDICA Y DATOS PERSONALES (el propio paciente) ----------------
+CAMPOS_FICHA = ('grupo_sanguineo', 'alergias', 'enfermedades_cronicas', 'medicacion',
+                'contacto_emergencia_nombre', 'contacto_emergencia_telefono')
+
+@app.route('/api/mi-ficha', methods=['GET'])
+def leer_ficha():
+    usuario, error = paciente_actual()
+    if error: return error
+    ficha = usuario.ficha_medica
+    datos = {'edad': usuario.edad, 'altura': usuario.altura, 'telefono': usuario.telefono}
+    for campo in CAMPOS_FICHA:
+        datos[campo] = getattr(ficha, campo) if ficha else None
+    return jsonify(datos)
+
+@app.route('/api/mi-ficha', methods=['PUT'])
+def guardar_ficha():
+    usuario, error = paciente_actual()
+    if error: return error
+    limpio, mensaje = validar_ficha(request.get_json(silent=True))
+    if mensaje: return jsonify({'error': mensaje}), 400
+
+    usuario.edad = limpio['edad']
+    usuario.altura = limpio['altura']
+    usuario.telefono = limpio['telefono']
+    ficha = usuario.ficha_medica
+    if not ficha:                                   # pacientes nuevos: aún no tienen ficha
+        ficha = MedicalProfile(user_id=usuario.id)
+        db.session.add(ficha)
+    for campo in CAMPOS_FICHA:
+        setattr(ficha, campo, limpio[campo])
+    if not guardar_en_bd(): return jsonify({'error': 'No se pudieron guardar los datos'}), 500
+    return jsonify({'mensaje': 'Datos guardados'}), 200
 
 @app.route('/api/mi-historial-tomas', methods=['GET'])
 def historial_tomas():

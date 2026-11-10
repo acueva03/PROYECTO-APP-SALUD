@@ -58,6 +58,6 @@
             msg.className = 'mensaje error';
         }
     });
-
+    document.addEventListener('ficha-guardada', cargarDatos);
     cargarDatos();
 })();
