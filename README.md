@@ -97,5 +97,3 @@ Las pruebas de JavaScript se comprueban con ESLint (`npm install` y después `np
 
 - **[Wiki del proyecto](https://github.com/acueva03/PROYECTO-APP-SALUD/wiki)**: páginas detalladas de cada funcionalidad.
 - **Carpeta [`doc/`](doc)**: documento de riesgos y resto de documentación del Sprint.
-
-(Añadiremos aquí las instrucciones detalladas paso a paso sobre cómo instalar y utilizar nuestra app).
