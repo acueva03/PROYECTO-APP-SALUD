@@ -28,8 +28,8 @@
 }
 
 .btn-sos {
-    width: 270px;
-    height: 270px;
+    width: min(16.875rem, 85vw);          /* 270px con letra normal; crece con "Letra grande" */
+    height: min(16.875rem, 85vw);
     border-radius: 50%;
     background: radial-gradient(circle, #E53935 0%, var(--color-peligro) 100%);
     color: #FFFFFF;
@@ -92,10 +92,15 @@
     align-items: center;
     gap: 0.75rem;
     text-align: center;
-    animation: parpadeo 1s infinite;   /* llama la atención sin depender solo del sonido */
+    animation: borde-aviso 1s infinite;   /* llama la atención sin depender solo del sonido */
 }
 
-.aviso-alarma-icono { font-size: 3rem; }
+/* Solo parpadean el icono y el borde: el texto y los botones mantienen siempre su contraste */
+.aviso-alarma-icono { font-size: 3rem; animation: parpadeo 1s infinite; }
+
+@keyframes borde-aviso {
+    50% { border-bottom-color: var(--color-peligro-oscuro); }
+}
 
 .aviso-alarma-texto {
     font-size: 1.8rem;
@@ -153,7 +158,7 @@
 .btn-quitar-alarma:hover { background-color: var(--color-peligro-fondo); }
 
 @media (max-width: 480px) {
-    .btn-sos { width: 230px; height: 230px; }
+    .btn-sos { width: min(14.375rem, 85vw); height: min(14.375rem, 85vw); }
     .texto-sos { font-size: 3.2rem; }
     .instruccion-sos { font-size: 1.3rem; }
 }
@@ -231,3 +236,184 @@
 }
 
 .btn-neutro-alarma:hover { background-color: var(--color-primario-suave); }
+
+/* ==========================================================================
+   ACCESIBILIDAD Y RIESGOS DE LA PANTALLA DEL PACIENTE (3.12, 3.14, 3.16, 3.18, 3.25)
+   Los modos de letra, alto contraste y sin animaciones están en accesibilidad.css
+   ========================================================================== */
+
+/* Bordes de los campos: #94A3B8 daba 2,56:1 sobre blanco (WCAG 1.4.11 pide 3:1). #64748B da 4,76:1 */
+.formulario input,
+.formulario select,
+.form-alarma select,
+.dias-semana { border-color: #64748B; }
+
+/* Tamaño táctil mínimo de 44x44 px en todos los botones pequeños y casillas */
+.btn-quitar-alarma,
+.btn-neutro-alarma { min-height: 2.75rem; min-width: 2.75rem; }
+.dia-semana,
+.opcion-ajuste { min-height: 2.75rem; }
+
+/* El estado de un mensaje no depende solo del color: lleva icono. El texto tras "/" es lo que lee el lector */
+.mensaje-alarma.ok:not(:empty)::before    { content: "✔ "; content: "✔ " / ""; }
+.mensaje-alarma.error:not(:empty)::before { content: "⚠ "; content: "⚠ " / "Error: "; }
+
+/* Solo para lectores de pantalla (regiones aria-live) */
+.solo-lector {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* ---------- Ajustes de visualización ---------- */
+.ajustes { padding-top: 1rem; padding-bottom: 1rem; }
+.ajustes summary {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-primario);
+    cursor: pointer;
+}
+.ajustes[open] summary { margin-bottom: 1rem; }
+.ajustes > .btn { margin: 0.25rem 0 0.75rem; }
+.grupo-ajuste {
+    border: 2px solid #64748B;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.25rem;
+}
+.grupo-ajuste legend { font-weight: 700; padding: 0 0.4rem; }
+.opcion-ajuste {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.opcion-ajuste input { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+
+/* ---------- 3.12: aviso fijo de pantalla abierta ---------- */
+.aviso-pantalla {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+    font-weight: 400;
+}
+.aviso-pantalla p { max-width: 60ch; }
+#estado-pantalla { display: block; font-size: 0.95rem; color: var(--color-texto-suave); }
+
+/* ---------- 3.18: resultado del SOS y errores de la pantalla ---------- */
+.resultado-sos {
+    width: 100%;
+    max-width: 32rem;
+    padding: 1rem;
+    border-radius: var(--radio-boton);
+    font-size: 1.25rem;
+    font-weight: 800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+.resultado-sos.ok    { background-color: var(--color-ok-fondo); color: #1B5E20; border: 2px solid var(--color-ok); }
+.resultado-sos.error { background-color: var(--color-peligro-fondo); color: var(--color-peligro-oscuro); border: 3px solid var(--color-peligro); }
+
+.btn-peligro {
+    background-color: var(--color-peligro-oscuro);      /* 6,57:1 con texto blanco */
+    color: #FFFFFF;
+    text-decoration: none;
+}
+.btn-peligro:hover { background-color: #8E0000; }
+
+.aviso-error-js {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+.aviso-error-js[hidden] { display: none; }
+
+/* ---------- 3.16: un aviso por medicamento, cada uno con sus botones ---------- */
+.aviso-alarma-titulo { font-size: 1.5rem; font-weight: 800; }
+.lista-avisos {
+    list-style: none;
+    width: 100%;
+    max-width: 36rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.item-aviso {
+    background-color: var(--color-superficie);
+    border: 2px solid var(--color-aviso);
+    border-radius: var(--radio-tarjeta);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.item-aviso-texto { font-size: 1.6rem; line-height: 1.25; }
+.item-aviso-texto strong { font-weight: 800; }
+.item-aviso-dosis { font-weight: 700; color: var(--color-aviso-texto); }
+.item-aviso-nota { display: block; font-size: 1.05rem; color: var(--color-texto-suave); margin-top: 0.25rem; }
+.item-aviso-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+
+.banner-ok { background-color: var(--color-ok-fondo); border-bottom: 2px solid var(--color-ok); color: #1B5E20; }
+.lista-hechas { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
+.lista-hechas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.75rem; }
+
+/* ---------- 3.14: eliminar, deshacer y papelera ---------- */
+.zona-mensaje-alarma {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin: 0.5rem 0 1rem;
+}
+.zona-mensaje-alarma:has(#mensaje-alarma:empty) { margin: 0; }
+
+.papelera { margin-top: 1.25rem; border-top: 1px solid var(--color-borde); padding-top: 0.75rem; }
+.papelera summary {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    color: var(--color-texto-suave);
+    cursor: pointer;
+}
+
+.dialogo {
+    margin: auto;
+    width: min(30rem, calc(100vw - 2rem));
+    border: none;
+    border-radius: var(--radio-tarjeta);
+    padding: 1.5rem;
+    background-color: var(--color-superficie);
+    color: var(--color-texto);
+    box-shadow: 0 20px 50px rgba(15, 44, 89, 0.35);
+}
+.dialogo::backdrop { background-color: rgba(15, 23, 42, 0.6); }
+.dialogo h2 { font-size: 1.4rem; margin-bottom: 0.75rem; color: var(--color-primario); }
+.dialogo-texto { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+.dialogo-botones { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.25rem; }
+.dialogo-botones .btn { width: 100%; }
+
+/* "Eliminar" en segundo plano cuando la alarma es de medicación: borde rojo, sin relleno */
+.btn-peligro-discreto {
+    background-color: var(--color-superficie);
+    color: var(--color-peligro-oscuro);
+    border-color: var(--color-peligro-oscuro);
+}
+.btn-peligro-discreto:hover { background-color: var(--color-peligro-fondo); }

@@ -33,6 +33,7 @@
             const f = await pedirJSON('/api/mi-ficha');
             for (const c of CAMPOS) entrada(c).value = (f[c] === null || f[c] === undefined) ? '' : f[c];
         } catch (e) {
+            console.error('[ficha] no se pudieron cargar los datos', e);                           // 3.18
             mostrar('No se pudieron cargar tus datos. Recarga la página.', false);
         }
     }
@@ -53,6 +54,7 @@
             document.dispatchEvent(new CustomEvent('ficha-guardada'));   // salud.js refresca "Mis datos"
             cargarFicha();
         } catch (e) {
+            console.error('[ficha] no se pudieron guardar los datos', e);                          // 3.18
             mostrar(e.name === 'AbortError' ? 'El servidor tarda demasiado. Inténtalo de nuevo.' : e.message, false);
         } finally {
             boton.disabled = false;

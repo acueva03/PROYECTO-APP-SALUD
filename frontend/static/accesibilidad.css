@@ -1,0 +1,86 @@
+/* ==========================================================================
+   ACCESIBILIDAD (riesgo 3.25 / HU 23): modos que activa accesibilidad.js en <html>.
+   Aprovecha que base.css usa variables y "rem": cambiando la letra de <html>
+   crece toda la pantalla, y cambiando las variables cambian todos los colores.
+   ========================================================================== */
+
+/* ---------- Tamaño de letra ---------- */
+html[data-letra="grande"]     { font-size: 125%; }
+html[data-letra="muy-grande"] { font-size: 150%; }
+
+/* Con letra grande la cabecera no cabe en una línea en el móvil: se reparte en dos */
+html[data-letra="grande"] .encabezado-contenido,
+html[data-letra="muy-grande"] .encabezado-contenido { flex-wrap: wrap; gap: 0.5rem; }
+
+/* ---------- Alto contraste ----------
+   Negro sobre blanco (21:1), bordes negros y colores de estado más oscuros (7:1 o más). */
+html.alto-contraste {
+    --color-fondo: #FFFFFF;
+    --color-superficie: #FFFFFF;
+    --color-borde: #000000;
+    --color-texto: #000000;
+    --color-texto-suave: #000000;
+    --color-primario: #0A1F40;
+    --color-primario-hover: #000000;
+    --color-primario-suave: #E8EEF8;
+    --color-ok: #1B5E20;
+    --color-ok-fondo: #FFFFFF;
+    --color-aviso: #000000;
+    --color-aviso-texto: #5C3B00;
+    --color-aviso-fondo: #FFF3CD;
+    --color-peligro: #8E0000;
+    --color-peligro-oscuro: #8E0000;
+    --color-peligro-fondo: #FFFFFF;
+    --color-foco: #000000;
+    --sombra-tarjeta: none;
+}
+
+html.alto-contraste .tarjeta,
+html.alto-contraste .item-aviso,
+html.alto-contraste .banner,
+html.alto-contraste .resultado-sos { border: 3px solid #000000; }
+
+html.alto-contraste input,
+html.alto-contraste select,
+html.alto-contraste .dias-semana,
+html.alto-contraste .grupo-ajuste { border: 3px solid #000000; }
+
+html.alto-contraste .instruccion-sos,
+html.alto-contraste .lista-vacia,
+html.alto-contraste .pie { color: #000000; }
+
+html.alto-contraste .btn-sos {
+    background: #8E0000;                          /* 9,6:1 con el texto blanco */
+    border-color: #000000;
+    box-shadow: 0 0 0 6px #FFFFFF, 0 0 0 10px #000000;   /* anillo nítido en lugar del halo rosado */
+}
+html.alto-contraste .encabezado { background-color: #000000; }
+
+/* El indicador de conexión usa --color-borde de fondo, que aquí es negro: se fuerza blanco sobre la cabecera negra */
+html.alto-contraste .estado-sistema {
+    background-color: #FFFFFF;
+    color: #000000;
+}
+html.alto-contraste .estado-sistema.sin-conexion {
+    background-color: #FFFFFF;
+    color: #8E0000;
+    outline: 3px solid #8E0000;
+}
+
+/* Enlaces siempre subrayados y foco doble (negro + amarillo): se ve sobre cualquier fondo */
+html.alto-contraste a { text-decoration: underline; }
+html.alto-contraste :focus-visible {
+    outline: 4px solid #000000;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 8px #FFD600;
+}
+
+/* ---------- Sin animaciones (además de respetar "reducir movimiento" del sistema, en base.css) ---------- */
+html.sin-animaciones *,
+html.sin-animaciones *::before,
+html.sin-animaciones *::after {
+    animation: none !important;
+    transition: none !important;
+}
+/* Sin parpadeo, el aviso de alarma se distingue con un borde más grueso */
+html.sin-animaciones .aviso-alarma { border-bottom-width: 8px; }

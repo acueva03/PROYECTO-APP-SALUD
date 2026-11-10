@@ -125,8 +125,14 @@ def medicacion_de_paciente(paciente_id):
                           RegistroToma.estado == 'PENDIENTE',
                           RegistroToma.creado >= desde)
                   .order_by(RegistroToma.creado).all())
-    alarmas = (Alarm.query.filter_by(user_id=paciente.id)
+    alarmas = (Alarm.query.filter_by(user_id=paciente.id, eliminada=False)
                .order_by(Alarm.activa.desc(), Alarm.hora).all())
+    # Riesgo 3.14.3: alarmas que el paciente ha eliminado (últimos 30 días), para avisar y poder restaurarlas
+    # con POST /api/alarmas/<id>/restaurar
+    desde_papelera = (ahora() - timedelta(days=30)).replace(tzinfo=None)
+    eliminadas = (Alarm.query.filter(Alarm.user_id == paciente.id, Alarm.eliminada.is_(True),
+                                     Alarm.eliminada_en >= desde_papelera)
+                  .order_by(Alarm.eliminada_en.desc()).all())
 
     return jsonify({
         'tomas_pendientes': [{
@@ -139,4 +145,8 @@ def medicacion_de_paciente(paciente_id):
             # '0,2,4' -> [0, 2, 4]  (lunes=0 ... domingo=6). [] = todos los días
             'dias': sorted({int(x) for x in (a.dias_semana or '').split(',') if x.strip().isdigit()}),
         } for a in alarmas],
+        'eliminadas': [{
+            'id': a.id, 'titulo': a.titulo, 'hora': a.hora, 'dosis': a.dosis,
+            'eliminada_en': a_iso_utc(a.eliminada_en),
+        } for a in eliminadas],
     })

@@ -117,6 +117,10 @@ class Alarm(db.Model):
     ultima_vez_sono = db.Column(db.DateTime, nullable=True)
     dosis = db.Column(db.String(50), nullable=True)
     dias_semana = db.Column(db.String(20), nullable=True)   # '0,2,4' (lunes=0 ... domingo=6)
+    # Riesgo 3.14: borrado lógico. "Eliminar" solo la marca; se puede recuperar desde la papelera.
+    # (Columna añadida también en actualizar_columnas() de app.py, regla 3.19)
+    eliminada = db.Column(db.Boolean, default=False, nullable=False)
+    eliminada_en = db.Column(db.DateTime, nullable=True)
 
 # Alerta SOS, guarda la fecha/hora y su estado: activa o atendida
 class AlertSOS(db.Model):
