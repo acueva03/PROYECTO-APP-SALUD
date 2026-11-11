@@ -98,6 +98,7 @@
                 mostrarMensaje('Un supervisor se ha vinculado contigo correctamente.', false);
             }
         } catch (e) {
+            console.error('[vinculos_paciente]', e);                                               // 3.18
             if (!silencioso) mostrarMensajeSup('No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.', true);
         } finally {
             clearTimeout(t);
@@ -124,6 +125,7 @@
             mostrarMensajeSup(datos.mensaje, false);
             await cargarSupervisores(false);
         } catch (e) {
+            console.error('[vinculos_paciente]', e);                                               // 3.18
             mostrarMensajeSup('No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.', true);
             boton.disabled = false;
         } finally {
@@ -158,6 +160,7 @@
             mostrarMensaje('Dale este código a tu supervisor, o enséñale el QR. Solo sirve una vez.', false);
             iniciarCuentaAtras(datos.minutos);
         } catch (e) {
+            console.error('[vinculos_paciente]', e);                                               // 3.18
             ocultarCodigo();
             mostrarMensaje('No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.', true);
         } finally {

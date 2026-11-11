@@ -64,7 +64,9 @@ def actualizar_columnas():
         'alarms': [('fecha', 'VARCHAR(10)'),
                    ('ultima_vez_sono', 'DATETIME'),
                    ('dosis', 'VARCHAR(50)'),
-                   ('dias_semana', 'VARCHAR(20)')],
+                   ('dias_semana', 'VARCHAR(20)'),
+                   ('eliminada', 'BOOLEAN NOT NULL DEFAULT 0'),     # riesgo 3.14 (borrado lógico)
+                   ('eliminada_en', 'DATETIME')],
         'registros_toma': [('dosis', 'VARCHAR(50)')],
         'users': [('username', 'VARCHAR(50)'),
           ('password_hash', 'VARCHAR(256)')],                       # NUEVO 
@@ -343,7 +345,7 @@ def listar_mis_alarmas():
     if not user_id: return jsonify({'error': 'No autorizado'}), 401
     usuario = db.session.get(User, user_id)
     incluir_todas = request.args.get('todas') == '1'
-    alarmas = [a for a in usuario.alarmas if incluir_todas or a.activa]
+    alarmas = [a for a in usuario.alarmas if not a.eliminada and (incluir_todas or a.activa)]
     alarmas.sort(key=lambda a: ((a.fecha or ''), a.hora))
     return jsonify([alarma_a_dict(a) for a in alarmas])
 
@@ -403,6 +405,7 @@ def cambiar_estado_alarma(alarma_id):
 
     # la alarma tiene que ser del usuario que llama
     if alarma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
+    if alarma.eliminada: return jsonify({'error': 'Alarma no encontrada'}), 404   # 3.14: está en la papelera
 
     data = request.get_json(silent=True) or {}
     if 'fecha' in data and not fecha_valida(data['fecha']): return jsonify({'error': 'Fecha inválida'}), 400
@@ -422,10 +425,65 @@ def eliminar_alarma(alarma_id):
     alarma = db.session.get(Alarm, alarma_id)
     if not alarma: return jsonify({'error': 'Alarma no encontrada'}), 404
     if alarma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403   # solo borra las suyas
+    if alarma.eliminada: return jsonify({'error': 'Alarma no encontrada'}), 404  # ya estaba en la papelera
 
-    db.session.delete(alarma)
+    # Riesgo 3.14: borrado LÓGICO. La alarma deja de sonar y de listarse, pero se puede recuperar.
+    alarma.eliminada = True
+    alarma.eliminada_en = ahora()
     if not guardar_en_bd(): return jsonify({'error': 'No se pudo eliminar la alarma'}), 500
-    return jsonify({'mensaje': 'Alarma eliminada'}), 200
+    return jsonify({'mensaje': 'Alarma eliminada', 'alarma_id': alarma.id}), 200
+
+# ---------------- PAPELERA DE ALARMAS (riesgo 3.14) ----------------
+DIAS_PAPELERA = 30      # la papelera muestra lo eliminado en los últimos 30 días
+
+def eliminadas_de(user_id):
+    """Alarmas eliminadas recientemente, la más reciente primero."""
+    desde = (ahora() - timedelta(days=DIAS_PAPELERA)).replace(tzinfo=None)
+    alarmas = (Alarm.query.filter(Alarm.user_id == user_id, Alarm.eliminada.is_(True),
+                                  Alarm.eliminada_en >= desde)
+               .order_by(Alarm.eliminada_en.desc()).all())
+    resultado = []
+    for a in alarmas:
+        d = alarma_a_dict(a)
+        d['eliminada_en'] = a.eliminada_en.replace(tzinfo=timezone.utc).isoformat()
+        resultado.append(d)
+    return resultado
+
+def reprogramar_si_ya_paso(alarma):
+    """Al recuperar una alarma activa cuya hora ya pasó, la mueve a la próxima vez que toque
+    (si no, sonaría nada más recuperarla como «perdida»)."""
+    if not alarma.activa:
+        return
+    ahora_madrid = datetime.now(ZONA)
+    hoy, hora_actual = ahora_madrid.date(), ahora_madrid.strftime('%H:%M')
+    if alarma.fecha and (alarma.fecha, alarma.hora) > (hoy.isoformat(), hora_actual):
+        return                                          # todavía no ha llegado: se queda como estaba
+    dia = hoy if alarma.hora > hora_actual else hoy + timedelta(days=1)
+    alarma.fecha = primera_fecha_valida(dia.isoformat(), dias_a_lista(alarma.dias_semana))
+
+@app.route('/api/mis-alarmas-eliminadas', methods=['GET'])
+def listar_alarmas_eliminadas():
+    usuario, error = paciente_actual()
+    if error: return error
+    return jsonify(eliminadas_de(usuario.id))
+
+@app.route('/api/alarmas/<int:alarma_id>/restaurar', methods=['POST'])
+def restaurar_alarma(alarma_id):
+    """La recupera el propio paciente o un supervisor vinculado a él (3.14.3)."""
+    usuario = usuario_actual()
+    if not usuario: return jsonify({'error': 'No autorizado'}), 401
+    alarma = db.session.get(Alarm, alarma_id)
+    if not alarma: return jsonify({'error': 'Alarma no encontrada'}), 404
+    es_suya = alarma.user_id == usuario.id
+    es_su_supervisor = usuario.rol == 'supervisor' and alarma.usuario in usuario.dependientes
+    if not (es_suya or es_su_supervisor): return jsonify({'error': 'Prohibido'}), 403
+    if not alarma.eliminada: return jsonify({'error': 'Esta alarma no está eliminada'}), 409
+
+    alarma.eliminada = False
+    alarma.eliminada_en = None
+    reprogramar_si_ya_paso(alarma)
+    if not guardar_en_bd(): return jsonify({'error': 'No se pudo recuperar la alarma'}), 500
+    return jsonify({'mensaje': 'Alarma recuperada', 'alarma': alarma_a_dict(alarma)}), 200
 
 def fecha_local_plausible(fecha_local):
     """3.13: la fecha que manda el móvil no puede diferir más de 1 día de la de Madrid."""
@@ -442,6 +500,7 @@ def alarma_sonada(alarma_id):
 
     # la alarma tiene que ser del usuario que llama
     if alarma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
+    if alarma.eliminada: return jsonify({'error': 'Alarma no encontrada'}), 404   # 3.14
 
     data = request.get_json(silent=True) or {}
     fecha_local, hora_local, fecha_prevista = data.get('fecha_local'), data.get('hora_local'), data.get('fecha_prevista')
@@ -461,7 +520,7 @@ def alarma_sonada(alarma_id):
     return jsonify({'mensaje': 'Sonada', 'registro_id': registro.id, 'alarma': alarma_a_dict(alarma)}), 200
 
 def toma_a_dict(t):
-    return {'toma_id': t.id, 'titulo': t.titulo, 'fecha_prevista': t.fecha_prevista, 'hora_prevista': t.hora_prevista, 'estado': t.estado, 'creado': t.creado.replace(tzinfo=timezone.utc).isoformat()}
+    return {'toma_id': t.id, 'titulo': t.titulo, 'dosis': t.dosis, 'fecha_prevista': t.fecha_prevista, 'hora_prevista': t.hora_prevista, 'estado': t.estado, 'creado': t.creado.replace(tzinfo=timezone.utc).isoformat()}
 
 def tomas_pendientes_de(user_id, horas):
     limite = ahora() - timedelta(hours=horas)
@@ -485,11 +544,55 @@ def confirmar_toma(toma_id):
         if not guardar_en_bd(): return jsonify({'error': 'Error base de datos'}), 500
     return jsonify({'mensaje': 'Toma confirmada'}), 200
 
+# Riesgo 3.16.3: "Deshacer" durante 1 minuto. El servidor da 30 s de margen por la red.
+SEGUNDOS_PARA_DESHACER = 90
+
+@app.route('/api/tomas/<int:toma_id>/deshacer', methods=['POST'])
+def deshacer_toma(toma_id):
+    user_id = session.get('user_id')
+    if not user_id: return jsonify({'error': 'No autorizado'}), 401
+    toma = db.session.get(RegistroToma, toma_id)
+    if not toma: return jsonify({'error': 'Toma no encontrada'}), 404
+    if toma.user_id != user_id: return jsonify({'error': 'Prohibido'}), 403
+    if toma.estado != 'CONFIRMADA' or not toma.confirmada_en:
+        return jsonify({'error': 'Esta toma no está confirmada'}), 409
+    if ahora() - toma.confirmada_en.replace(tzinfo=timezone.utc) > timedelta(seconds=SEGUNDOS_PARA_DESHACER):
+        return jsonify({'error': 'Ya no se puede deshacer'}), 409
+    toma.estado = 'PENDIENTE'
+    toma.confirmada_en = None
+    if not guardar_en_bd(): return jsonify({'error': 'Error base de datos'}), 500
+    return jsonify({'mensaje': 'Toma pendiente de nuevo'}), 200
+
 @app.route('/api/mis-tomas-pendientes', methods=['GET'])
 def tomas_pendientes():
     user_id = session.get('user_id')
     if not user_id: return jsonify({'error': 'No autorizado'}), 401
     return jsonify([toma_a_dict(t) for t in tomas_pendientes_de(user_id, 6)])
+
+# Riesgo 3.12.3: si la pantalla del paciente estaba cerrada, la alarma nunca suena y no se crea
+# ningún RegistroToma, así que el supervisor no se enteraba. Una alarma ACTIVA cuya hora pasó hace
+# más de 15 minutos es una alarma que no ha sonado: al sonar, su fecha avanza o se desactiva.
+MINUTOS_SIN_SONAR = 15
+
+def alarmas_sin_sonar_de(user_id, horas=24):
+    ahora_madrid = datetime.now(ZONA)
+    limite_reciente = ahora_madrid - timedelta(minutes=MINUTOS_SIN_SONAR)
+    limite_antiguo = ahora_madrid - timedelta(hours=horas)
+    resultado = []
+    for a in Alarm.query.filter_by(user_id=user_id, activa=True, eliminada=False).all():
+        if not a.fecha:
+            continue
+        try:
+            momento = datetime.strptime(a.fecha + ' ' + a.hora, '%Y-%m-%d %H:%M').replace(tzinfo=ZONA)
+        except ValueError:
+            continue
+        if not (limite_antiguo <= momento <= limite_reciente):
+            continue
+        # Si ya hay registro de toma para esa fecha y hora, sí sonó (y ya sale como toma pendiente)
+        if RegistroToma.query.filter_by(alarma_id=a.id, fecha_prevista=a.fecha, hora_prevista=a.hora).first():
+            continue
+        resultado.append((a, momento))
+    return resultado
 
 @app.route('/api/mis-tomas-supervisadas', methods=['GET'])
 def tomas_supervisor():
@@ -503,6 +606,13 @@ def tomas_supervisor():
             d['dependiente'] = dep.nombre
             d['dependiente_id'] = dep.id      
             resultado.append(d)
+        # 3.12.3: mismo formato que una toma pendiente, para que el panel las muestre como "sin confirmar"
+        for a, momento in alarmas_sin_sonar_de(dep.id, 24):
+            resultado.append({'toma_id': None, 'titulo': a.titulo + ' (no ha sonado en su móvil)',
+                              'dosis': a.dosis, 'fecha_prevista': a.fecha, 'hora_prevista': a.hora,
+                              'estado': 'NO_SONO', 'sin_sonar': True,
+                              'creado': momento.astimezone(timezone.utc).isoformat(),
+                              'dependiente': dep.nombre, 'dependiente_id': dep.id})
     return jsonify(resultado)
 
 # ---------------- APARTADO "MI SALUD" ----------------

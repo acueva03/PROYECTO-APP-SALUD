@@ -28,6 +28,7 @@
             }
         } catch (e) {
             // Sin conexión no se sabe nada: se deja el aviso como estaba (no avisamos en falso)
+            console.error('[reloj] no se pudo comparar la hora con el servidor', e);              // 3.18
         } finally {
             clearTimeout(t);
         }

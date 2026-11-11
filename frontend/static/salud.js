@@ -30,7 +30,9 @@
                 const v = s[el.dataset.campo];
                 el.textContent = (v === null || v === undefined || v === '') ? '—' : v;
             });
-        } catch (e) { /* se queda con los guiones */ }
+        } catch (e) {
+            console.error('[salud] no se pudieron cargar los datos (se quedan los guiones)', e);   // 3.18
+        }
     }
 
     // ---- Registrar peso ----
@@ -54,7 +56,9 @@
             document.getElementById('peso-kg').value = '';
             cargarDatos();          // el "Peso (kg)" y el IMC de arriba se actualizan
         } catch (e) {
-            msg.textContent = e.message;
+            console.error('[salud] no se pudo guardar el peso', e);                                // 3.18
+            msg.textContent = e.name === 'AbortError' || e instanceof TypeError
+                ? 'Sin conexión: no se pudo guardar el peso. Inténtalo de nuevo.' : e.message;
             msg.className = 'mensaje error';
         }
     });

@@ -11,7 +11,7 @@ export default [
     },
     rules: {
       'no-undef': 'error',
-      'no-empty': 'warn',
+      'no-empty': 'error',          // riesgo 3.18.2: ningún catch vacío
       'no-unused-vars': ['warn', { caughtErrors: 'none' }]
     }
   }

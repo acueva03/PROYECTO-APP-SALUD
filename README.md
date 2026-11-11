@@ -47,7 +47,8 @@ doc/         Documentación del proyecto (incluido el documento de riesgos)
 .github/     Integración continua (tests y ESLint)
 ```
 
-Archivos de JavaScript relevantes: `conexion.js` (pantalla del paciente: SOS y alarmas), `supervisor.js` (panel de alertas),
+Archivos de JavaScript relevantes: `sos.js` (botón SOS, independiente del resto), `conexion.js` (alarmas del paciente),
+`errores.js` (errores visibles), `accesibilidad.js` (letra, contraste y voz), `supervisor.js` (panel de alertas),
 `salud.js` (datos y peso del paciente), `graficos.js` y `supervisor_salud.js` (gráficos de salud del supervisor),
 `reloj.js` (aviso de reloj desajustado) y `vinculos_*.js` (código y QR de vinculación).
 
@@ -65,6 +66,8 @@ Si eres un nuevo usuario o supervisor, esta aplicación está diseñada para aco
 - **Usuarios Dependientes**: Podréis crear alarmas sencillas o repetitivas (como beber agua o tomar una medicación), pulsar el botón SOS si os encontráis en una emergencia, consultar vuestros datos de salud y registrar vuestro peso. Para que un familiar os supervise, generad un código de vinculación (o enseñadle el QR): caduca a los 10 minutos y solo sirve una vez.
 - **Usuarios Supervisores**: Podréis vincular vuestra cuenta a la de un familiar dependiente escribiendo su código o escaneando su QR, para establecer un seguimiento constante de sus rutinas. Además, tendréis un panel donde veréis las alertas médicas de manera instantánea y los recordatorios sin confirmar.
 - **Gráficos de salud (supervisores)**: desde el panel, el botón **Ver gráficos de salud** abre en otra pestaña la evolución del peso, el porcentaje de tomas confirmadas de los últimos 14 días y el registro de medicamentos del paciente. Es una pantalla de solo consulta. Mantened abierta la pestaña del panel: es la que hace sonar las alertas SOS.
+- **Accesibilidad (pacientes)**: el panel **Ajustes de letra, contraste y voz** permite agrandar la letra, activar el alto contraste, que los avisos se lean en voz alta y quitar animaciones. Se guarda en el móvil.
+- **Alarmas de medicación**: cada aviso tiene su propio «Ya lo hice» (se puede deshacer durante 1 minuto). Una alarma eliminada se puede recuperar durante 30 días desde «Alarmas eliminadas». Las alarmas solo suenan con la pantalla de la app abierta.
 - **Aviso de reloj**: si la hora del móvil de un paciente difiere más de 5 minutos de la del servidor, la pantalla del paciente muestra un aviso para que la corrija, porque las alarmas suenan según el reloj del móvil.
 
 ## 5. Instalación y Ejecución del Entorno
@@ -98,8 +101,9 @@ Para ejecutar el código Python que da el enlace a la web con Flask, en la termi
    - `python3 -m unittest test_reloj -v`
    - `python3 -m unittest test_supervisor_salud -v`
    - `python -m unittest test_sesion -v`
+   - `python3 -m unittest test_paciente_riesgos -v`
 
-Las pruebas de JavaScript se comprueban con ESLint (`npm install` y después `npx eslint`), y el mismo análisis y los tests se ejecutan automáticamente en GitHub Actions en cada push.
+Antes de cada entrega se repasa la lista de [`doc/PRUEBAS_MANUALES.md`](doc/PRUEBAS_MANUALES.md). Las pruebas de JavaScript se comprueban con ESLint (`npm install` y después `npx eslint`), y el mismo análisis y los tests se ejecutan automáticamente en GitHub Actions en cada push.
 
 ## 6. Documentación
 

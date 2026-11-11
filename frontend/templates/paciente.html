@@ -4,6 +4,7 @@
 {% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='paciente.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vinculos.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='accesibilidad.css') }}">
 {% endblock %}
 {% block subtitulo %}Mi asistencia{% endblock %}
 
@@ -16,20 +17,40 @@
 {% endblock %}
 
 {% block avisos %}
-<!-- AVISO DE ALARMA: oculto hasta que llega la hora de una alarma (lo controla conexion.js) -->
-<div id="aviso-alarma" class="aviso-alarma" role="alertdialog" aria-live="assertive" hidden>
+<!-- Regiones para lectores de pantalla (accesibilidad.js). Existen SIEMPRE: si se crearan a la vez que
+     el texto, muchos lectores no lo leerían. Son invisibles en pantalla. -->
+<div id="anuncio-educado" class="solo-lector" role="status" aria-live="polite"></div>
+<div id="anuncio-urgente" class="solo-lector" role="alert" aria-live="assertive"></div>
+
+<!-- Error de JavaScript no capturado (errores.js, riesgo 3.18) -->
+<div id="aviso-error-js" class="banner banner-peligro aviso-error-js" hidden>
+    <span id="texto-aviso-error-js"></span>
+    <button id="btn-cerrar-aviso-error" class="btn-neutro-alarma" type="button">Cerrar</button>
+</div>
+
+<!-- AVISO DE ALARMA (conexion.js, riesgo 3.16): un elemento por aviso, cada uno con SUS botones.
+     Al abrirse, el foco va al primer botón (patrón alertdialog) -->
+<div id="aviso-alarma" class="aviso-alarma" role="alertdialog" aria-labelledby="titulo-aviso-alarma" hidden>
     <p class="aviso-alarma-icono" aria-hidden="true">⏰</p>
-    <p id="texto-alarma" class="aviso-alarma-texto"></p>
-    <button id="btn-alarma-entendida" class="btn btn-primario btn-grande btn-alarma-entendida" type="button">✔ Ya lo hice</button>
-    <button id="btn-alarma-posponer" class="btn btn-secundario btn-alarma-posponer" type="button">Posponer 10 minutos</button>
+    <h2 id="titulo-aviso-alarma" class="aviso-alarma-titulo">Es la hora de:</h2>
+    <ul id="lista-avisos" class="lista-avisos"></ul>
+    <button id="btn-leer-avisos" class="btn btn-secundario" type="button">🔊 Leer en voz alta</button>
+</div>
+
+<!-- Tomas recién confirmadas: "Deshacer" durante 1 minuto (riesgo 3.16.3) -->
+<div id="tomas-hechas" class="banner banner-ok tomas-hechas" hidden>
+    <ul id="lista-hechas" class="lista-hechas"></ul>
 </div>
 
 <!-- AVISO DE RELOJ DESAJUSTADO (riesgo 3.13, lo controla reloj.js) -->
 <div id="aviso-reloj" class="banner banner-peligro" role="alert" hidden></div>      <!-- NUEVO -->
 
 
-<!-- El navegador bloquea el sonido hasta que el usuario toca la página; este botón lo desbloquea -->
-<div id="aviso-sonido-alarma" class="banner banner-aviso">
+<!-- Riesgo 3.12: aviso FIJO (no se oculta). El botón de sonido sí desaparece cuando ya está activado,
+     porque el navegador bloquea el sonido hasta que el usuario toca la página -->
+<div id="aviso-sonido-alarma" class="banner banner-aviso aviso-pantalla" role="region" aria-label="Aviso sobre las alarmas">
+    <p><strong>📱 Mantén esta pantalla abierta y con el volumen subido:</strong> las alarmas solo suenan mientras esté abierta.
+       <span id="estado-pantalla"></span></p>
     <button id="btn-activar-sonido-alarma" class="btn btn-primario" type="button">🔔 Activar sonido de alarmas</button>
 </div>
 {% endblock %}
@@ -40,6 +61,23 @@
     <p>Aquí puedes pedir ayuda y gestionar tus recordatorios.</p>
 </section>
 
+<!-- AJUSTES DE VISUALIZACIÓN (accesibilidad.js, riesgo 3.25 / HU 23). Cerrado para no apartar el SOS -->
+<details id="ajustes-visualizacion" class="tarjeta ajustes">
+    <summary>Ajustes de letra, contraste y voz</summary>
+    <fieldset class="grupo-ajuste">
+        <legend>Tamaño de la letra</legend>
+        <label class="opcion-ajuste"><input type="radio" name="letra" value="normal"> Normal</label>
+        <label class="opcion-ajuste"><input type="radio" name="letra" value="grande"> Grande</label>
+        <label class="opcion-ajuste"><input type="radio" name="letra" value="muy-grande"> Muy grande</label>
+    </fieldset>
+    <label class="opcion-ajuste"><input id="ajuste-contraste" type="checkbox"> Alto contraste</label>
+    <label class="opcion-ajuste"><input id="ajuste-voz" type="checkbox"> Leer los avisos en voz alta</label>
+    <p id="aviso-sin-voz" class="texto-suave" hidden>Este navegador no puede leer en voz alta.</p>
+    <button id="btn-probar-voz" class="btn btn-secundario" type="button">🔊 Probar la voz</button>
+    <label class="opcion-ajuste"><input id="ajuste-animaciones" type="checkbox"> Quitar parpadeos y animaciones</label>
+    <p class="texto-suave">Estos ajustes se guardan en este móvil.</p>
+</details>
+
 <!-- BOTÓN SOS -->
 <section class="tarjeta seccion-sos">
     <p class="instruccion-sos">
@@ -48,13 +86,19 @@
     </p>
 
     <div class="area-boton">
-        <!-- El id "boton-sos" lo usa conexion.js: no cambiarlo -->
+        <!-- El id "boton-sos" lo usa sos.js: no cambiarlo -->
         <button id="boton-sos" class="btn-sos" type="button"
-                aria-label="Botón de emergencia SOS. Pulsa para pedir ayuda inmediata">
+                aria-label="SOS: pedir ayuda inmediata">
             <span class="icono-sos" aria-hidden="true">⚠</span>
             <span class="texto-sos">SOS</span>
             <span class="subtexto-sos">Pedir ayuda</span>
         </button>
+    </div>
+
+    <!-- Resultado del SOS (sos.js). Si falla, aparece el botón para llamar al 112 -->
+    <div id="resultado-sos" class="resultado-sos" role="alert" hidden>
+        <p id="texto-resultado-sos"></p>
+        <a id="llamar-112" class="btn btn-peligro btn-grande" href="tel:112" hidden>📞 Llamar al 112</a>
     </div>
 </section>
 
@@ -102,15 +146,39 @@
         </fieldset>
 
         <button type="submit" class="btn btn-primario btn-crear-alarma">Crear alarma</button>
-        <p id="mensaje-alarma" class="mensaje-alarma" role="status" aria-live="polite"></p>
     </form>
+    <!-- Fuera del formulario: también lo usan Desactivar, Eliminar, Recuperar... -->
+    <div class="zona-mensaje-alarma">
+        <p id="mensaje-alarma" class="mensaje-alarma" role="status" aria-live="polite"></p>
+        <div id="accion-deshacer-eliminar"></div>
+    </div>
 
     <h3>Alarmas activas</h3>
     <ul id="lista-alarmas" class="lista-alarmas"></ul>
 
     <h3>Ya sonaron o desactivadas</h3>
     <ul id="lista-inactivas" class="lista-alarmas"></ul>
+
+    <!-- Papelera (riesgo 3.14): las alarmas eliminadas se pueden recuperar durante 30 días -->
+    <details class="papelera">
+        <summary>Alarmas eliminadas (<span id="contador-papelera">0</span>)</summary>
+        <ul id="lista-eliminadas" class="lista-alarmas"></ul>
+    </details>
 </section>
+
+<!-- Diálogo propio para eliminar (riesgo 3.14). El foco empieza en la opción segura -->
+<dialog id="dialogo-eliminar" class="dialogo" aria-labelledby="titulo-dialogo-eliminar" aria-describedby="texto-dialogo-eliminar">
+    <form method="dialog">
+        <h2 id="titulo-dialogo-eliminar">¿Eliminar la alarma?</h2>
+        <p id="texto-dialogo-eliminar" class="dialogo-texto"></p>
+        <p id="ayuda-dialogo-eliminar" class="texto-suave"></p>
+        <div class="dialogo-botones">
+            <button id="btn-dialogo-desactivar" class="btn btn-primario btn-grande" value="desactivar">Desactivar</button>
+            <button id="btn-dialogo-eliminar" class="btn btn-peligro-discreto" value="eliminar">Eliminar</button>
+            <button id="btn-dialogo-cancelar" class="btn btn-secundario" value="">Cancelar</button>
+        </div>
+    </form>
+</dialog>
 
 <!-- VINCULAR UN SUPERVISOR (lo controla vinculos_paciente.js) -->
 <section class="tarjeta" id="seccion-vinculo" aria-labelledby="titulo-vinculo">
@@ -205,6 +273,10 @@
 {% block pie %}Al pulsar el botón SOS, tu supervisor recibirá un aviso inmediato.{% endblock %}
 
 {% block scripts %}
+<!-- sos.js va el PRIMERO y no depende de nadie: si otro script falla, el SOS sigue funcionando (3.18) -->
+<script src="{{ url_for('static', filename='sos.js') }}"></script>
+<script src="{{ url_for('static', filename='errores.js') }}"></script>
+<script src="{{ url_for('static', filename='accesibilidad.js') }}"></script>
 <script src="{{ url_for('static', filename='conexion.js') }}"></script>
 <script src="{{ url_for('static', filename='salud.js') }}"></script>
 <script src="{{ url_for('static', filename='vinculos_paciente.js') }}"></script>
