@@ -110,8 +110,9 @@ async function pedir(url, { metodo = 'GET', cuerpo, timeout = TIMEOUT_MS } = {})
     } finally {
         clearTimeout(timeoutId);
     }
-    if (respuesta.status === 401) {               // sesión caducada: a iniciar sesión
-        window.location.href = '/login';
+    if (respuesta.status === 401) {               // sesión caducada: banner y a iniciar sesión (riesgo 3.17)
+        document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
+        setTimeout(() => { window.location.href = '/login'; }, 3000);
         throw new Errores.ErrorServidor(401, 'Tu sesión ha caducado');
     }
     if (!respuesta.ok) {
@@ -191,16 +192,6 @@ const yaDisparadas = new Set();
 async function cargarAlarmas() {
     try {
         const respuesta = await pedir('/api/mis-alarmas?todas=1');
-        const respuesta = await fetch('/api/mis-alarmas?todas=1', { signal: controller.signal });
-        
-        // NUEVO: Riesgo 3.17 - Banner de sesión caducada
-        if (respuesta.status === 401) {
-            document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
-            setTimeout(() => { window.location.href = '/login'; }, 3000);
-            return;
-        }
-
-        if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const todas = await respuesta.json();
         alarmas = todas.filter(a => a.activa);
         alarmasInactivas = todas.filter(a => !a.activa);
