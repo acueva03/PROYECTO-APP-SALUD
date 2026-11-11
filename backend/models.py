@@ -176,3 +176,11 @@ class VinculoLog(db.Model):
     accion = db.Column(db.String(20), nullable=False)          # 'VINCULADO' o 'DESVINCULADO'
     iniciado_por = db.Column(db.String(20), nullable=False)    # 'SUPERVISOR' o 'PACIENTE'
     fecha = db.Column(db.DateTime, default=ahora)
+
+# Cada login fallido se anota para bloquear la fuerza bruta (riesgo 3.15): 5 fallos en 10 minutos
+class IntentoLogin(db.Model):
+    __tablename__ = 'intentos_login'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), nullable=False, index=True)
+    ip = db.Column(db.String(45), nullable=True)
+    fecha = db.Column(db.DateTime, default=ahora)

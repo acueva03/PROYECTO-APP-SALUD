@@ -94,7 +94,14 @@ async function cargarAlarmas() {
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_ALARMAS_MS);
     try {
         const respuesta = await fetch('/api/mis-alarmas?todas=1', { signal: controller.signal });
-        if (respuesta.status === 401) { window.location.href = '/login'; return; }
+        
+        // NUEVO: Riesgo 3.17 - Banner de sesión caducada
+        if (respuesta.status === 401) {
+            document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
+            setTimeout(() => { window.location.href = '/login'; }, 3000);
+            return;
+        }
+
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const todas = await respuesta.json();
         alarmas = todas.filter(a => a.activa);

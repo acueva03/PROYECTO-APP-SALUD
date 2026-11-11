@@ -131,6 +131,14 @@ async function consultarAlertas() {
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
         const respuesta = await fetch('/api/mis-alertas', { signal: controller.signal });
+        
+        // NUEVO: Riesgo 3.17 - Banner de sesión caducada
+        if (respuesta.status === 401) {
+            document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
+            setTimeout(() => { window.location.href = '/login'; }, 3000);
+            return;
+        }
+
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const alertas = await respuesta.json();
 
@@ -165,17 +173,6 @@ async function consultarAlertas() {
     }
 }
 
-async function atenderAlerta(id) {
-    try {
-        const respuesta = await fetch('/api/alertas/' + id + '/atender', { method: 'POST' });
-        if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
-    } catch (error) {
-        alert('No se pudo marcar la alerta como atendida. Inténtalo de nuevo.');
-        return;
-    }
-    consultarAlertas();
-}
-
 consultarAlertas();
 setInterval(consultarAlertas, INTERVALO_MS);
 
@@ -187,6 +184,14 @@ const contadorTomas = document.getElementById('contador-tomas');
 async function consultarTomas() {
     try {
         const respuesta = await fetch('/api/mis-tomas-supervisadas');
+        
+        // NUEVO: Riesgo 3.17 - Banner de sesión caducada
+        if (respuesta.status === 401) {
+            document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
+            setTimeout(() => { window.location.href = '/login'; }, 3000);
+            return;
+        }
+
         if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
         const tomas = await respuesta.json();
 

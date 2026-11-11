@@ -1,11 +1,13 @@
 import os
+import secrets
 import threading
 import time
 from datetime import datetime, timedelta, timezone, date
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from sqlalchemy import inspect, text, or_
 from models import (db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma,
-                    PesoRegistro, CodigoVinculo, IntentoVinculo, VinculoLog, ahora, hoy_madrid, ZONA)
+                    PesoRegistro, CodigoVinculo, IntentoVinculo, IntentoLogin, VinculoLog,
+                    ahora, hoy_madrid, ZONA)
 # NUEVO: reglas de usuario y contraseña
 from validaciones import (normalizar_username, validar_username,
                           validar_password, username_desde_nombre)
@@ -15,14 +17,31 @@ from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_co
                       formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
                       VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
 from supervisor_bp import supervisor_bp, paciente_supervisado_o_403
+try:
+    from dotenv import load_dotenv
+except ImportError:      # sin python-dotenv solo se usan las variables del sistema
+    load_dotenv = None
+
+# Lee backend/.env (SECRET_KEY, PRODUCCION...). Ese archivo NO se sube a GitHub (.gitignore)
+if load_dotenv:
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+
 
 app = Flask(__name__, 
             template_folder='../frontend/templates', 
             static_folder='../frontend/static')
 
 # Configuración de sesiones para el login seguro
-app.config['SECRET_KEY'] = 'clave_super_secreta_cambiar_en_produccion'
-app.config['SESSION_COOKIE_HTTPONLY'] = True
+# Sesiones seguras (riesgos 3.15 y 3.17)
+clave = os.environ.get('SECRET_KEY')
+if not clave:
+    clave = secrets.token_hex(32)
+    print('AVISO: no hay SECRET_KEY en backend/.env. Se usa una clave temporal: las sesiones se cerrarán al reiniciar.')
+app.config['SECRET_KEY'] = clave
+app.config['SESSION_COOKIE_HTTPONLY'] = True                 # JavaScript no puede leer la cookie
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'                # no se envía desde otras webs (anti-CSRF)
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('PRODUCCION') == '1'   # solo por HTTPS en producción
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)               # 3.17: la sesión dura 30 días
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 # CAMBIADO: si existe la variable DATABASE_URL (la usan los tests) se usa esa base de datos;
@@ -167,24 +186,54 @@ def usuario_actual():
 
 # ---------------- RUTAS DE LOGIN, REGISTRO Y LOGOUT ----------------
 # CAMBIADO: el login ahora busca por username (único), no por nombre
+MAX_FALLOS_LOGIN = 5          # riesgo 3.15: fallos permitidos...
+VENTANA_LOGIN_MINUTOS = 10    # ...en esta ventana de tiempo, por usuario e IP
+
+def fallos_login_recientes(username, ip):
+    """Logins fallidos en los últimos 10 min de ESTE usuario desde ESTA IP."""
+    desde = (ahora() - timedelta(minutes=VENTANA_LOGIN_MINUTOS)).replace(tzinfo=None)
+    return IntentoLogin.query.filter(
+        IntentoLogin.fecha >= desde,
+        IntentoLogin.username == username,
+        IntentoLogin.ip == ip
+    ).count()
+
+# CAMBIADO: el login busca por username (único) y se bloquea tras 5 fallos
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         data = request.form
-        username = normalizar_username(data.get('username'))
+        username = normalizar_username(data.get('username'))[:50]
         password = data.get('password') or ''
+        ip = request.remote_addr or ''
+
+        # Se comprueba ANTES de mirar la contraseña: durante el bloqueo ni la buena sirve.
+        # Vale igual para usuarios que no existen, así no se revela quién tiene cuenta.
+        if username and fallos_login_recientes(username, ip) >= MAX_FALLOS_LOGIN:
+            return render_template('login.html',
+                                   error='Demasiados intentos fallidos. Espera 10 minutos e inténtalo de nuevo.'), 429
 
         usuario = User.query.filter_by(username=username).first() if username else None
         if usuario and usuario.check_password(password):
+            IntentoLogin.query.filter_by(username=username, ip=ip).delete()   # acierta: contador a cero
+            guardar_en_bd()
             session.clear()
+            session.permanent = True            # 3.17: la sesión dura 30 días
             session['user_id'] = usuario.id
             session['rol'] = usuario.rol
             session['nombre'] = usuario.nombre
-            
+
             if usuario.rol == 'supervisor':
                 return redirect(url_for('supervisor'))
             return redirect(url_for('inicio'))
-            
+
+        # Fallo: se anota (y se limpian los antiguos para que la tabla no crezca sin fin)
+        if username:
+            limite = (ahora() - timedelta(days=1)).replace(tzinfo=None)
+            IntentoLogin.query.filter(IntentoLogin.fecha < limite).delete()
+            db.session.add(IntentoLogin(username=username, ip=ip))
+            guardar_en_bd()
+
         # Mensaje genérico: no decimos si falló el usuario o la contraseña
         return render_template('login.html', error="Usuario o contraseña incorrectos"), 401
     return render_template('login.html')
@@ -225,6 +274,7 @@ def registro():
 
     # Al registrarse entra directamente con su cuenta
     session.clear()
+    session.permanent = True            # 3.17: la sesión dura 30 días
     session['user_id'] = usuario.id
     session['rol'] = usuario.rol
     session['nombre'] = usuario.nombre
