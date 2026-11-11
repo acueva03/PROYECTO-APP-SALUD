@@ -64,6 +64,21 @@ let ultimoEstado = '';
 let hayAlertas = false;
 let fallosSeguidos = 0;
 
+async function atenderAlerta(id) {
+    try {
+        const respuesta = await fetch('/api/alertas/' + id + '/atender', { method: 'POST' });
+        if (respuesta.status === 401) {
+            window.location.href = '/login';
+            return;
+        }
+        if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+    } catch (error) {
+        alert('No se pudo marcar la alerta como atendida. Inténtalo de nuevo.');
+        return;
+    }
+    consultarAlertas();
+}
+
 function crearTarjetaAlerta(alerta) {
     const div = document.createElement('div');
     const titulo = document.createElement('h3');
