@@ -77,7 +77,14 @@ Para ejecutar el código Python que da el enlace a la web con Flask, en la termi
 2. Instalar las dependencias: `pip install -r backend/requirements.txt`
 3. Crear los datos de prueba (solo la primera vez): `python3 backend/seed.py`
    Crea dos usuarios de ejemplo: `alberto` (supervisor) y `maria` (paciente), ambos con contraseña `1234`.
-4. Arrancar la aplicación: `python3 backend/app.py` y abrir http://127.0.0.1:5000
+4. Para que el sistema de inicio de sesión funcione de forma segura (mitigación del Riesgo 3.15), la aplicación necesita una clave secreta que firme las sesiones: 
+    - En la carpeta `backend/`, busca el archivo llamado `.env.example`.
+    - Haz una copia de ese archivo en la misma carpeta y renómbralo exactamente a `.env` (este archivo está ignorado en Git para que tus claves no se suban al repositorio).
+    - Genera una clave segura abriendo tu terminal y ejecutando:
+     `python -c "import secrets; print(secrets.token_hex(32))"`
+    - Abre tu nuevo archivo `.env` y pega esa clave generada sustituyendo el texto de ejemplo:
+     `SECRET_KEY=la_clave_generada_aqui`
+5. Arrancar la aplicación: `python3 backend/app.py` y abrir http://127.0.0.1:5000
 
 ### Pruebas
 
@@ -90,6 +97,7 @@ Para ejecutar el código Python que da el enlace a la web con Flask, en la termi
    - `python3 -m unittest test_vinculos -v`
    - `python3 -m unittest test_reloj -v`
    - `python3 -m unittest test_supervisor_salud -v`
+   - `python -m unittest test_sesion -v`
 
 Las pruebas de JavaScript se comprueban con ESLint (`npm install` y después `npx eslint`), y el mismo análisis y los tests se ejecutan automáticamente en GitHub Actions en cada push.
 
