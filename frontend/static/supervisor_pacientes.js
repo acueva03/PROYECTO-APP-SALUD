@@ -159,6 +159,42 @@
                 a.hora + ' · ' + a.titulo + (a.dosis ? ' (' + a.dosis + ')' : '') +
                 ' · ' + descripcionRepeticion(a) + (a.activa ? '' : ' · desactivada')));
         }
+
+        // Riesgo 3.14.3: alarmas que el paciente eliminó, visibles para que el supervisor pueda restaurarlas
+        const bloqueEliminadas = vista.querySelector('[data-bloque="eliminadas"]');
+        const listaEliminadas = vista.querySelector('[data-lista="eliminadas"]');
+        if (bloqueEliminadas && listaEliminadas) {
+            listaEliminadas.replaceChildren();
+            const eliminadas = datos.eliminadas || [];
+            bloqueEliminadas.hidden = (eliminadas.length === 0);
+            for (const a of eliminadas) {
+                const li = liTexto(
+                    a.hora + ' · ' + a.titulo + (a.dosis ? ' (' + a.dosis + ')' : '') +
+                    (a.eliminada_en ? ' · eliminada el ' + fechaHora(a.eliminada_en) : ' · eliminada'));
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'btn-restaurar';
+                boton.textContent = 'Restaurar alarma';
+                boton.addEventListener('click', async () => {
+                    boton.disabled = true;
+                    try {
+                        const r = await fetch('/api/alarmas/' + a.id + '/restaurar', { method: 'POST' });
+                        const res = await r.json();
+                        if (!r.ok) throw new Error(res.error || 'HTTP ' + r.status);
+                        refrescar();
+                    } catch (err) {
+                        const mensaje = vista.querySelector('[data-mensaje]');
+                        if (mensaje) {
+                            mensaje.textContent = 'No se pudo restaurar la alarma: ' + err.message;
+                            mensaje.hidden = false;
+                        }
+                        boton.disabled = false;
+                    }
+                });
+                li.append(document.createElement('br'), boton);
+                listaEliminadas.append(li);
+            }
+        }
     }
 
     // ---------- Tarjetas del Resumen ----------

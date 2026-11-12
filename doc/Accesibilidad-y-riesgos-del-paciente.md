@@ -63,25 +63,30 @@ La pantalla del paciente es la que usan personas mayores o con poca visión, y e
 - **La pantalla encendida necesita HTTPS o `localhost`.** Abriendo la app desde otro móvil por la IP de la red local (`http://192.168…`) el navegador no lo permite, y el aviso lo dice.
 - **La voz depende del navegador y del móvil.** Si no hay voz en español, se usa la que haya; si el navegador no tiene síntesis de voz, el panel lo indica y desactiva la opción.
 - El navegador no deja hablar ni sonar hasta que el usuario toca la página: por eso sigue el botón «Activar sonido de alarmas».
-- **Pendiente para quien lleve el panel del supervisor (3.14.3):** el backend ya devuelve las eliminadas y deja restaurarlas; falta pintarlas en `supervisor_pacientes.js` (pestaña Medicación). El aviso 3.12.3 sí se ve ya en *Recordatorios sin confirmar* sin tocar el panel.
+- **Interfaz del supervisor completada (3.14.3):** el supervisor ve las alarmas eliminadas en la pestaña Medicación de cada paciente y dispone de un botón «Restaurar alarma» para recuperarlas. El aviso 3.12.3 se muestra en *Recordatorios sin confirmar*.
 - El contador de la tarjeta de cada paciente en el Resumen (`/api/supervisor/pacientes`) no incluye todavía las alarmas que no sonaron.
 
-## Tests
+## Tests y Pruebas en Móvil Real (3.12.2)
 
 `python3 -m unittest test_paciente_riesgos -v` (16 tests):
 
-- **3.14:** eliminar no borra la fila; una eliminada no se lista, no suena (404) ni se puede reactivar; papelera y recuperar; permisos de recuperar (401 sin sesión, 403 otro paciente, 403 supervisor no vinculado, 200 su supervisor); recuperar una alarma pasada la reprograma; el supervisor la ve aparte; la papelera es solo para pacientes.
+- **3.14:** eliminar no borra la fila; una eliminada no se lista, no suena (404) ni se puede reactivar; papelera y recuperar; permisos de recuperar (401 sin sesión, 403 otro paciente, 403 supervisor no vinculado, 200 su supervisor); recuperar una alarma pasada la reprograma; el supervisor la ve aparte y puede restaurarla; la papelera es solo para pacientes.
 - **3.16:** confirmar una de dos tomas a la misma hora deja la otra `PENDIENTE` (también para el supervisor); las tomas pendientes traen la dosis; deshacer devuelve a `PENDIENTE`; deshacer caduca; permisos de deshacer.
 - **3.12.3:** una alarma pasada hace 20 min sin sonar avisa al supervisor; margen de 15 min; no avisa si sonó, si está eliminada o desactivada; solo la ve su supervisor.
 
-Además se probó la pantalla en Chromium (móvil de 412 px) con 35 comprobaciones: avisos y foco, confirmar uno sin confirmar el otro en la BD, deshacer, diálogo de eliminar y papelera, SOS con y sin conexión, aviso de error de JavaScript, ajustes que se guardan al recargar, sin scroll horizontal con letra muy grande y botones de 44 px como mínimo. La migración de la columna nueva se probó sobre una copia de una `app_salud.db` antigua: no se pierde ningún dato.
+**Resultados de la prueba en móvil real (3.12.2):**
+1. **Pantalla activa en primer plano:** El Wake Lock (`navigator.wakeLock`) mantiene la pantalla encendida sin apagarse por inactividad y la alarma suena exactamente a su hora.
+2. **Pantalla bloqueada o app minimizada:** El navegador frena los temporizadores (`setInterval`) por ahorro de energía del sistema operativo. Al desbloquear el terminal o volver a la pestaña, el evento `visibilitychange` despierta la comprobación inmediata: la alarma atrasada suena al instante y se reanuda el bloqueo de apagado.
+3. **App cerrada o móvil apagado:** Tras 15 minutos de la hora prevista sin confirmación ni sonada, el backend detecta la alarma no sonada y avisa al supervisor con «(no ha sonado en su móvil)» en sus recordatorios pendientes.
+
+Además se probó la pantalla en Chromium (móvil de 412 px) con 35 comprobaciones: avisos y foco, confirmar uno sin confirmar el otro en la BD, deshacer, diálogo de eliminar y papelera, restauración desde el panel del supervisor, SOS con y sin conexión, aviso de error de JavaScript, ajustes que se guardan al recargar, sin scroll horizontal con letra muy grande y botones de 44 px como mínimo. La migración de la columna nueva se probó sobre una copia de una `app_salud.db` antigua: no se pierde ningún dato.
 
 ## Para actualizar en la Wiki (Plan RSGR)
 
 | ID | Estado nuevo |
 |---|---|
-| 3.12 | Implementado (3.12.2: falta la prueba en móvil real) |
-| 3.14 | Implementado, salvo la interfaz de 3.14.3 en el panel del supervisor |
+| 3.12 | Implementado (prueba 3.12.2 en móvil real completada) |
+| 3.14 | Implementado (incluida la interfaz 3.14.3 en el panel del supervisor) |
 | 3.16 | Implementado |
 | 3.18 | Implementado |
 | 3.25 | Implementado en la pantalla del paciente (3.25.2: Lighthouse/axe hecho con axe-core; faltan las sesiones con usuarios, ligadas a 3.10) |

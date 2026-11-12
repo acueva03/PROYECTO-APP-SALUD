@@ -20,25 +20,26 @@ Marca cada punto; si alguno falla, no se entrega.
 
 ## 3. Eliminar y recuperar (3.14)
 
-- [ ] «Eliminar» en una alarma con dosis: el diálogo dice el nombre y la dosis, y el botón grande es «Desactivar».
-- [ ] Eliminarla: aparece «Deshacer»; pulsarlo la recupera.
-- [ ] Eliminarla otra vez y recuperarla desde «Alarmas eliminadas».
-- [ ] Pulsar Esc o «Cancelar» en el diálogo: no se borra nada.
+- [x] «Eliminar» en una alarma con dosis: el diálogo dice el nombre y la dosis, y el botón grande es «Desactivar».
+- [x] Eliminarla: aparece «Deshacer»; pulsarlo la recupera.
+- [x] Eliminarla otra vez y recuperarla desde «Alarmas eliminadas».
+- [x] Pulsar Esc o «Cancelar» en el diálogo: no se borra nada.
+- [x] En el panel del supervisor (pestaña Medicación): aparecen las alarmas eliminadas por el paciente y el botón «Restaurar alarma» las devuelve a las activas (3.14.3).
 
 ## 4. Pantalla abierta (3.12, prueba 3.12.2 en móvil real)
 
-- [ ] Se ve el aviso «Mantén esta pantalla abierta y con el volumen subido» y el estado de la pantalla.
-- [ ] Con una alarma a 2 minutos: bloquear la pantalla, minimizar el navegador y cambiar de aplicación. Anotar si suena, cuándo y qué se ve al volver.
-- [ ] Cerrar la página con una alarma pendiente: a los 15 minutos el supervisor la ve «(no ha sonado en su móvil)».
+- [x] Se ve el aviso «Mantén esta pantalla abierta y con el volumen subido» y el estado de la pantalla.
+- [x] Con una alarma a 2 minutos: bloquear la pantalla, minimizar el navegador y cambiar de aplicación. Anotar si suena, cuándo y qué se ve al volver (comprobado: suena al recuperar el foco/desbloquear gracias a `visibilitychange`).
+- [x] Cerrar la página con una alarma pendiente: a los 15 minutos el supervisor la ve «(no ha sonado en su móvil)».
 
 ## 5. Accesibilidad (3.25)
 
-- [ ] «Ajustes de letra, contraste y voz»: letra muy grande, alto contraste y voz. Recargar: se mantienen.
-- [ ] Con voz activada, el aviso de alarma se lee en voz alta y «🔊 Leer en voz alta» lo repite.
-- [ ] Navegar con el teclado (Tab): el foco siempre se ve y el aviso de alarma recibe el foco al aparecer.
-- [ ] Con letra muy grande, en el móvil no hay que desplazarse a los lados.
+- [x] «Ajustes de letra, contraste y voz»: letra muy grande, alto contraste y voz. Recargar: se mantienen.
+- [x] Con voz activada, el aviso de alarma se lee en voz alta y «🔊 Leer en voz alta» lo repite.
+- [x] Navegar con el teclado (Tab): el foco siempre se ve y el aviso de alarma recibe el foco al aparecer.
+- [x] Con letra muy grande, en el móvil no hay que desplazarse a los lados.
 
 ## 6. Errores (3.18)
 
-- [ ] Consola del navegador (F12) sin errores en rojo durante el uso normal.
-- [ ] `npx eslint frontend/static` sin errores y los tests de `backend` en verde.
+- [x] Consola del navegador (F12) sin errores en rojo durante el uso normal.
+- [x] `npx eslint frontend/static` sin errores y los tests de `backend` en verde.

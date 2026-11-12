@@ -139,6 +139,24 @@
 
 .btn-atender:hover { background-color: var(--color-peligro-oscuro); }
 
+/* Botón para recuperar alarmas eliminadas por el paciente (3.14.3) */
+.btn-restaurar {
+    margin-top: 0.5rem;
+    padding: 0.5rem 1.1rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    background-color: var(--color-primario);
+    color: #FFFFFF;
+    border: 2px solid transparent;
+    border-radius: var(--radio-boton);
+    cursor: pointer;
+    transition: background-color var(--transicion-rapida);
+}
+
+.btn-restaurar:hover { background-color: var(--color-primario-hover); }
+.btn-restaurar:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* ---------- Recordatorios sin confirmar ---------- */
 .lista-tomas li { color: #334155; }
 
