@@ -16,7 +16,7 @@ from esquema import comprobar_esquema
 from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_codigo,
                       formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
                       VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
-from supervisor_bp import supervisor_bp, paciente_supervisado_o_403
+from supervisor_bp import supervisor_bp, paciente_supervisado_o_403, clave_orden
 try:
     from dotenv import load_dotenv
 except ImportError:      # sin python-dotenv solo se usan las variables del sistema
@@ -302,7 +302,7 @@ def supervisor():
         return redirect(url_for('login'))
     usuario = db.session.get(User, session['user_id'])
        # CAMBIADO: se pasan TODOS los pacientes, por orden alfabético
-    pacientes = sorted(usuario.dependientes, key=lambda p: p.nombre_completo.lower())
+    pacientes = sorted(usuario.dependientes, key=lambda p: clave_orden(p.nombre_completo))
     return render_template('supervisor.html', usuario=usuario, pacientes=pacientes)
 
 @app.route('/api/alarmas', methods=['POST'])
