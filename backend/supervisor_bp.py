@@ -5,6 +5,8 @@
 # (menos conflictos de merge). Aquí van:
 #   1) el helper de permisos paciente_supervisado_o_403 (el que usan P2, P3 y P4)
 #   2) los endpoints nuevos del panel del supervisor
+import unicodedata
+
 from datetime import timedelta, timezone
 
 from flask import Blueprint, jsonify, session
@@ -24,6 +26,12 @@ def usuario_actual():
     """El usuario de la sesión, o None si no ha iniciado sesión."""
     user_id = session.get('user_id')
     return db.session.get(User, user_id) if user_id else None
+
+
+def clave_orden(texto):
+       """Ordena nombres como un diccionario en español: ignora mayúsculas y tildes, y la Ñ va entre N y O."""
+       texto = (texto or '').casefold().replace('ñ', 'n{')     # '{' va justo después de 'z': n < ñ < o
+       return ''.join(c for c in unicodedata.normalize('NFD', texto) if not unicodedata.combining(c))
 
 
 def a_iso_utc(fecha):
@@ -96,7 +104,7 @@ def listar_pacientes_supervisor():
         })
 
     # Los pacientes con SOS activo salen primero; el resto, por orden alfabético
-    resultado.sort(key=lambda d: (not d['sos_activo'], d['nombre'].lower()))
+    resultado.sort(key=lambda d: (not d['sos_activo'], clave_orden(d['nombre'])))
     return jsonify(resultado)
 
 
