@@ -101,7 +101,8 @@ class TestPantallas(BaseSalud):
         self.assertNotIn(b'grafico-tomas', r.data)
         self.assertNotIn(b'lista-historial', r.data)
         self.assertIn(b'data-campo="peso"', r.data)       # los datos de arriba siguen
-        self.assertIn(b'form-peso', r.data)               # y se puede registrar el peso
+        self.assertNotIn(b'form-peso', r.data)            # el peso ya no se registra en la pantalla principal
+        self.assertIn(b'/ficha-medica', r.data)           # sino desde la pantalla de la ficha médica
 
     def test_panel_del_supervisor_tiene_el_enlace(self):
         r = self.cli('alberto').get('/supervisor')
