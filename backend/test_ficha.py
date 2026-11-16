@@ -104,10 +104,23 @@ class TestFichaApi(BaseTest):
         self.assertEqual(sup.put('/api/mi-ficha', json=DATOS_OK).status_code, 403)
         self.assertIsNone(self.recargar_maria().edad)          # el supervisor no pudo tocar nada
 
-    def test_pantalla_del_paciente_tiene_el_formulario(self):
+    def test_pantalla_del_paciente_enlaza_a_la_ficha(self):
         r = self.cliente.get('/')
         self.assertEqual(r.status_code, 200)
+        self.assertIn(b'/ficha-medica', r.data)
+        self.assertNotIn(b'form-ficha', r.data)
+
+    def test_pantalla_ficha_medica_tiene_los_formularios(self):
+        r = self.cliente.get('/ficha-medica')
+        self.assertEqual(r.status_code, 200)
         self.assertIn(b'form-ficha', r.data)
+        self.assertIn(b'form-peso', r.data)
+
+    def test_pantalla_ficha_medica_exige_ser_paciente(self):
+        self.assertEqual(app.test_client().get('/ficha-medica').status_code, 302)
+        sup = app.test_client()
+        sup.post('/login', data={'username': 'alberto', 'password': '1234'})
+        self.assertEqual(sup.get('/ficha-medica').status_code, 302)
 
 
 if __name__ == '__main__':

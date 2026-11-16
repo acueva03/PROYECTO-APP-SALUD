@@ -296,6 +296,13 @@ def inicio():
     usuario = db.session.get(User, session['user_id'])
     return render_template('paciente.html', usuario=usuario)
 
+@app.route('/ficha-medica')
+def pagina_ficha_medica():
+    if 'user_id' not in session or session.get('rol') != 'dependiente':
+        return redirect(url_for('login'))
+    usuario = db.session.get(User, session['user_id'])
+    return render_template('ficha_medica.html', usuario=usuario)
+
 @app.route('/supervisor')
 def supervisor():
     if 'user_id' not in session or session.get('rol') != 'supervisor':
