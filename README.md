@@ -87,7 +87,7 @@ Para ejecutar el código Python que da el enlace a la web con Flask, en la termi
      `python -c "import secrets; print(secrets.token_hex(32))"`
     - Abre tu nuevo archivo `.env` y pega esa clave generada sustituyendo el texto de ejemplo:
      `SECRET_KEY=la_clave_generada_aqui`
-5. Arrancar la aplicación: `python3 backend/app.py` y abrir http://127.0.0.1:5000
+5. Arrancar la aplicación: `python3 backend/app.py` y abrir  http://127.0.0.1:5000
 
 ### Pruebas
 
