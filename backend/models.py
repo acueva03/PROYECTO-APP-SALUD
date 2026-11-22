@@ -211,3 +211,24 @@ class AvisoEnviado(db.Model):
     __table_args__ = (
         db.UniqueConstraint('tipo', 'clave', name='uq_aviso_tipo_clave'),
     )
+
+# Check-in diario «Estoy bien» (P5 - Laura). Una fila por paciente y día.
+class CheckIn(db.Model):
+    __tablename__ = 'checkins'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    fecha = db.Column(db.String(10), nullable=False)       # 'AAAA-MM-DD' (día de Madrid), como en las alarmas
+    hecho_en = db.Column(db.DateTime, default=ahora)       # momento exacto (UTC)
+    estado_animo = db.Column(db.String(50), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'fecha', name='uq_checkin_user_fecha'),   # solo un check-in por día
+    )
+
+# Configuración del check-in de cada paciente (hora límite y si está activo)
+class CheckinConfig(db.Model):
+    __tablename__ = 'checkin_config'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+    hora_limite = db.Column(db.String(5), nullable=False, default='11:00')    # 'HH:MM'
+    activo = db.Column(db.Boolean, nullable=False, default=True)

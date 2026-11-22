@@ -18,6 +18,7 @@ from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_co
                       VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
 from supervisor_bp import supervisor_bp, paciente_supervisado_o_403
 from notificaciones_bp import notificaciones_bp
+from checkin_bp import checkin_bp
 from notificaciones import enviar_a_supervisores_de, enviar_a_usuario
 try:
     from dotenv import load_dotenv
@@ -58,6 +59,7 @@ db.init_app(app)
 
 app.register_blueprint(supervisor_bp)      # activa las rutas de supervisor_bp.py
 app.register_blueprint(notificaciones_bp)  # activa las rutas de notificaciones_bp.py (P4)
+app.register_blueprint(checkin_bp)         # activa las rutas de checkin_bp.py
 
 with app.app_context(): 
     db.create_all()

@@ -102,6 +102,35 @@
     </div>
 </section>
 
+<!-- CHECK-IN DIARIO «ESTOY BIEN» (lo controla checkin.js) -->
+<section class="tarjeta seccion-checkin" id="seccion-checkin" aria-labelledby="titulo-checkin">
+    <div class="tarjeta-cabecera"><h2 id="titulo-checkin">¿Cómo estás hoy?</h2></div>
+    <p id="texto-checkin" class="texto-suave">Cargando…</p>
+
+    <!-- Las opciones las rellena checkin.js con las que manda el servidor (ESTADOS_ANIMO de checkin_bp.py) -->
+    <div class="formulario">
+        <label for="checkin-animo">¿Cómo te sientes? (opcional)</label>
+        <select id="checkin-animo">
+            <option value="">Prefiero no decirlo</option>
+        </select>
+    </div>
+
+    <button id="btn-checkin" class="btn btn-primario btn-grande btn-ancho btn-checkin" type="button" disabled>✔ Estoy bien</button>
+    <p id="mensaje-checkin" class="mensaje" role="status" aria-live="polite"></p>
+
+    <!-- Hora límite y activar/desactivar: plegado para no apartar el botón -->
+    <details class="papelera ajustes-checkin">
+        <summary>Cambiar la hora límite del aviso</summary>
+        <form id="form-checkin-config" class="formulario">
+            <label for="checkin-hora-limite">Hora límite (entre las 08:00 y las 23:00)</label>
+            <input id="checkin-hora-limite" type="time" min="08:00" max="23:00" required>
+            <label class="opcion-ajuste"><input id="checkin-activo" type="checkbox"> Avisar a mi supervisor si no lo hago</label>
+            <button type="submit" class="btn btn-secundario">Guardar</button>
+            <p id="mensaje-checkin-config" class="mensaje" role="status" aria-live="polite"></p>
+        </form>
+    </details>
+</section>
+
 <!-- GESTIÓN DE ALARMAS (lo controla conexion.js) -->
 <section class="tarjeta seccion-alarmas" aria-labelledby="titulo-alarmas">
     <div class="tarjeta-cabecera">
@@ -230,6 +259,7 @@
 <script src="{{ url_for('static', filename='errores.js') }}"></script>
 <script src="{{ url_for('static', filename='accesibilidad.js') }}"></script>
 <script src="{{ url_for('static', filename='conexion.js') }}"></script>
+<script src="{{ url_for('static', filename='checkin.js') }}"></script>
 <script src="{{ url_for('static', filename='salud.js') }}"></script>
 <script src="{{ url_for('static', filename='vinculos_paciente.js') }}"></script>
 <script src="{{ url_for('static', filename='reloj.js') }}"></script>

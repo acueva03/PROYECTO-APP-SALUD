@@ -419,3 +419,14 @@
 .btn-peligro-discreto:hover { background-color: var(--color-peligro-fondo); }
 
 .btn-modificar-ficha { margin-top: 1.25rem; text-align: center; }
+
+/* ---------- Check-in diario «Estoy bien» (checkin.js) ---------- */
+.btn-checkin {
+    min-height: 4rem;              /* botón grande y fácil de pulsar */
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-top: 1rem;
+}
+.btn-checkin:disabled { opacity: 0.7; cursor: not-allowed; }
+.seccion-checkin select { font-size: 1.2rem; }
+.ajustes-checkin { margin-top: 1.25rem; }
