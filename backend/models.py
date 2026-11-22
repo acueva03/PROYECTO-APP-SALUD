@@ -188,3 +188,26 @@ class IntentoLogin(db.Model):
     username = db.Column(db.String(50), nullable=False, index=True)
     ip = db.Column(db.String(45), nullable=True)
     fecha = db.Column(db.DateTime, default=ahora)
+
+# Dispositivos registrados para recibir notificaciones push vía Firebase (P4 - Andrés)
+class DispositivoPush(db.Model):
+    __tablename__ = 'dispositivos_push'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    token = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    plataforma = db.Column(db.String(20), default='android')
+    creado = db.Column(db.DateTime, default=ahora)
+    ultimo_uso = db.Column(db.DateTime, default=ahora)
+
+# Control de idempotencia para tareas periódicas y avisos (P4 - Andrés)
+class AvisoEnviado(db.Model):
+    __tablename__ = 'avisos_enviados'
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(50), nullable=False)
+    clave = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    enviado_en = db.Column(db.DateTime, default=ahora)
+
+    __table_args__ = (
+        db.UniqueConstraint('tipo', 'clave', name='uq_aviso_tipo_clave'),
+    )

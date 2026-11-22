@@ -17,6 +17,8 @@ from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_co
                       formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
                       VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
 from supervisor_bp import supervisor_bp, paciente_supervisado_o_403
+from notificaciones_bp import notificaciones_bp
+from notificaciones import enviar_a_supervisores_de, enviar_a_usuario
 try:
     from dotenv import load_dotenv
 except ImportError:      # sin python-dotenv solo se usan las variables del sistema
@@ -55,6 +57,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 db.init_app(app)
 
 app.register_blueprint(supervisor_bp)      # activa las rutas de supervisor_bp.py
+app.register_blueprint(notificaciones_bp)  # activa las rutas de notificaciones_bp.py (P4)
 
 with app.app_context(): 
     db.create_all()
@@ -372,6 +375,14 @@ def activar_sos():
     db.session.add(alerta)
     if not guardar_en_bd(): return jsonify({'error': 'Error interno'}), 500
     print("ALERTA SOS RECIBIDA:", alerta.id)
+    # P4 (Andrés): Notificación push inmediata al supervisor
+    enviar_a_supervisores_de(
+        usuario.id,
+        'SOS',
+        f"SOS: {usuario.nombre} necesita ayuda",
+        "Ha pulsado el botón de emergencia SOS.",
+        datos={'tipo': 'SOS', 'alerta_id': str(alerta.id), 'paciente_id': str(usuario.id)}
+    )
     return jsonify({'mensaje': 'Alerta SOS emitida', 'alerta_id': alerta.id}), 201
 
 @app.route('/api/mis-alertas', methods=['GET'])
@@ -400,6 +411,14 @@ def atender_alerta(alerta_id):
 
     alerta.estado = 'ATENDIDA'
     if not guardar_en_bd(): return jsonify({'error': 'No se pudo marcar la alerta'}), 500
+    # P4 (Andrés): Notificación push al paciente confirmando atención
+    enviar_a_usuario(
+        alerta.user_id,
+        'SOS',
+        'Aviso atendido',
+        f'Tu supervisor {sup.nombre} ha atendido tu aviso.',
+        datos={'tipo': 'SOS_ATENDIDO', 'alerta_id': str(alerta.id)}
+    )
     return jsonify({'mensaje': 'Alerta atendida'}), 200
 
 @app.route('/api/alarmas/<int:alarma_id>/estado', methods=['PATCH'])
