@@ -102,6 +102,7 @@ Para ejecutar el código Python que da el enlace a la web con Flask, en la termi
    - `python3 -m unittest test_supervisor_salud -v`
    - `python -m unittest test_sesion -v`
    - `python3 -m unittest test_paciente_riesgos -v`
+   - `python -m unittest test_notificaciones -v`
 
 Antes de cada entrega se repasa la lista de [`doc/PRUEBAS_MANUALES.md`](doc/PRUEBAS_MANUALES.md). Las pruebas de JavaScript se comprueban con ESLint (`npm install` y después `npx eslint`), y el mismo análisis y los tests se ejecutan automáticamente en GitHub Actions en cada push.
 
