@@ -2,12 +2,16 @@
 Ejecutar desde backend/:  python3 -m unittest test_checkin -v"""
 from base_tests import BaseTest      # PRIMERO: fija DATABASE_URL en memoria antes de importar app
 import os
-from datetime import date, timedelta
+import unittest
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
+
+from sqlalchemy.exc import IntegrityError
 
 from app import app
 from models import db, User, CheckIn, CheckinConfig, AvisoEnviado, hoy_madrid
-from checkin_bp import procesar_checkins_perdidos
+from checkin_bp import (procesar_checkins_perdidos, hora_valida, hora_local_de, ESTADOS_ANIMO,
+                        HORA_LIMITE_MINIMA, HORA_LIMITE_MAXIMA, HORA_LIMITE_POR_DEFECTO)
 
 
 class BaseCheckin(BaseTest):
@@ -244,7 +248,197 @@ class TestAvisoCheckinPerdido(BaseCheckin):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.get_json()['checkins_avisados'], 1)
 
+# ---------------------------------------------------------------------------
+# Funciones internas (caja blanca: no necesitan base de datos)
+# ---------------------------------------------------------------------------
+class TestFuncionesInternas(unittest.TestCase):
+    def test_hora_valida_acepta_horas_reales(self):
+        for ok in ('00:00', '08:00', '12:30', '23:59'):
+            self.assertTrue(hora_valida(ok), ok)
+
+    def test_hora_valida_rechaza_formatos_raros(self):
+        # Pruebas pensadas para que falle: sin cero, fuera de rango, con segundos, espacios, tipos raros...
+        for mal in ('', '9:00', '09:0', '24:00', '12:60', '09:00:00', 'ab:cd', ' 09:00', '09:00\n', None, 900, ['09:00']):
+            self.assertFalse(hora_valida(mal), repr(mal))
+
+    def test_hora_local_pasa_de_utc_a_madrid(self):
+        # En verano Madrid va +2 h respecto a UTC; en invierno, +1 h (cambio de hora incluido)
+        self.assertEqual(hora_local_de(datetime(2026, 7, 1, 8, 30)), '10:30')
+        self.assertEqual(hora_local_de(datetime(2026, 1, 15, 8, 30)), '09:30')
+        self.assertIsNone(hora_local_de(None))
+
+    def test_constantes_coherentes(self):
+        self.assertLessEqual(HORA_LIMITE_MINIMA, HORA_LIMITE_POR_DEFECTO)
+        self.assertLessEqual(HORA_LIMITE_POR_DEFECTO, HORA_LIMITE_MAXIMA)
+        self.assertTrue(hora_valida(HORA_LIMITE_MINIMA) and hora_valida(HORA_LIMITE_MAXIMA))
+
+    def test_opciones_de_animo_caben_en_la_columna(self):
+        self.assertGreater(len(ESTADOS_ANIMO), 0)
+        self.assertEqual(len(ESTADOS_ANIMO), len(set(ESTADOS_ANIMO)))     # sin repetidas
+        for e in ESTADOS_ANIMO:
+            self.assertLessEqual(len(e), 50, e)                           # la columna es String(50)
+
+
+# ---------------------------------------------------------------------------
+# Casos límite de la API
+# ---------------------------------------------------------------------------
+class TestCasosLimite(BaseCheckin):
+    def ayer(self):
+        return (hoy_madrid() - timedelta(days=1)).isoformat()
+
+    def test_el_checkin_de_ayer_no_cuenta_para_hoy(self):
+        db.session.add(CheckIn(user_id=self.maria.id, fecha=self.ayer()))
+        db.session.commit()
+        self.assertFalse(self.cli('maria').get('/api/mi-checkin').get_json()['hecho'])
+        self.assertEqual(self.cli('maria').post('/api/checkin', json={}).status_code, 201)
+        self.assertEqual(CheckIn.query.count(), 2)
+
+    def test_ventana_de_14_dias_del_supervisor(self):
+        hoy = hoy_madrid()
+        db.session.add_all([
+            CheckIn(user_id=self.maria.id, fecha=(hoy - timedelta(days=13)).isoformat()),   # el más antiguo que se ve
+            CheckIn(user_id=self.maria.id, fecha=(hoy - timedelta(days=14)).isoformat()),   # ya fuera de la ventana
+        ])
+        db.session.commit()
+        dias = self.cli('alberto').get(f'/api/supervisor/pacientes/{self.maria.id}/checkin').get_json()['dias']
+        self.assertEqual(len(dias), 14)
+        self.assertTrue(dias[0]['hecho'])                       # hace 13 días: entra
+        self.assertEqual(sum(1 for d in dias if d['hecho']), 1)  # hace 14 días: no aparece
+
+    def test_la_base_de_datos_impide_dos_checkins_el_mismo_dia(self):
+        hoy = hoy_madrid().isoformat()
+        db.session.add(CheckIn(user_id=self.maria.id, fecha=hoy))
+        db.session.commit()
+        db.session.add(CheckIn(user_id=self.maria.id, fecha=hoy))
+        with self.assertRaises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
+        self.assertEqual(CheckIn.query.count(), 1)
+
+    def test_desactivado_permite_hacer_el_checkin_igualmente(self):
+        db.session.add(CheckinConfig(user_id=self.maria.id, hora_limite='11:00', activo=False))
+        db.session.commit()
+        self.assertEqual(self.cli('maria').post('/api/checkin', json={}).status_code, 201)
+
+    def test_animo_vacio_se_guarda_como_sin_rellenar(self):
+        self.assertEqual(self.cli('maria').post('/api/checkin', json={'estado_animo': ''}).status_code, 201)
+        self.assertIsNone(CheckIn.query.one().estado_animo)
+
+    def test_cuerpo_que_no_es_json_cuenta_como_sin_animo(self):
+        r = self.cli('maria').post('/api/checkin', data='no es json', content_type='text/plain')
+        self.assertEqual(r.status_code, 201)
+        self.assertIsNone(CheckIn.query.one().estado_animo)
+
+    def test_el_checkin_de_otro_paciente_no_se_mezcla(self):
+        self.alberto.dependientes.append(self.rosa)
+        db.session.commit()
+        self.cli('rosa').post('/api/checkin', json={})
+        datos = self.cli('alberto').get(f'/api/supervisor/pacientes/{self.maria.id}/checkin').get_json()
+        self.assertFalse(datos['dias'][-1]['hecho'])            # lo de Rosa no aparece en María
+        datos_rosa = self.cli('alberto').get(f'/api/supervisor/pacientes/{self.rosa.id}/checkin').get_json()
+        self.assertTrue(datos_rosa['dias'][-1]['hecho'])
+
+    def test_la_hora_del_checkin_es_la_de_madrid(self):
+        r = self.cli('maria').post('/api/checkin', json={}).get_json()
+        db.session.expire_all()
+        esperada = hora_local_de(CheckIn.query.one().hecho_en)
+        self.assertEqual(r['hora'], esperada)
+
+
+# ---------------------------------------------------------------------------
+# Más casos del aviso al supervisor
+# ---------------------------------------------------------------------------
+class TestAvisoCasosExtra(BaseCheckin):
+    def avisar(self, hora):
+        with patch('checkin_bp.hora_madrid', return_value=hora), \
+             patch('checkin_bp.enviar_a_supervisores_de') as envio:
+            return procesar_checkins_perdidos(), envio
+
+    def test_el_checkin_de_ayer_no_evita_el_aviso_de_hoy(self):
+        ayer = (hoy_madrid() - timedelta(days=1)).isoformat()
+        db.session.add(CheckIn(user_id=self.maria.id, fecha=ayer))
+        db.session.commit()
+        self.assertEqual(self.avisar('12:00')[0], 1)
+
+    def test_dos_pacientes_sin_checkin_dan_dos_avisos(self):
+        self.alberto.dependientes.append(self.rosa)
+        db.session.commit()
+        avisos, envio = self.avisar('12:00')
+        self.assertEqual(avisos, 2)
+        pacientes = sorted(c.kwargs['paciente_id'] for c in envio.call_args_list)
+        self.assertEqual(pacientes, sorted([self.maria.id, self.rosa.id]))
+        self.assertEqual(AvisoEnviado.query.filter_by(tipo='CHECKIN_PERDIDO').count(), 2)
+
+    def test_solo_avisa_por_los_que_no_lo_hicieron(self):
+        self.alberto.dependientes.append(self.rosa)
+        db.session.commit()
+        self.cli('maria').post('/api/checkin', json={})
+        avisos, envio = self.avisar('12:00')
+        self.assertEqual(avisos, 1)
+        self.assertEqual(envio.call_args.kwargs['paciente_id'], self.rosa.id)
+
+    def test_con_dos_supervisores_es_un_solo_aviso_del_paciente(self):
+        # enviar_a_supervisores_de ya reparte el push entre todos los supervisores: no se llama dos veces
+        self.lucia.dependientes.append(self.maria)
+        db.session.commit()
+        avisos, envio = self.avisar('12:00')
+        self.assertEqual(avisos, 1)
+        self.assertEqual(envio.call_count, 1)
+
+    def test_los_supervisores_no_generan_avisos(self):
+        # Alberto y Lucía son supervisores: nunca se les pide el check-in
+        avisos, envio = self.avisar('23:30')
+        self.assertEqual(avisos, 1)                              # solo María (Rosa no tiene supervisor)
+        self.assertEqual(envio.call_args.kwargs['paciente_id'], self.maria.id)
+
+    def test_contenido_del_aviso(self):
+        _, envio = self.avisar('12:00')
+        k = envio.call_args.kwargs
+        self.assertEqual(k['tipo'], 'CHECKIN_PERDIDO')
+        self.assertIn('María', k['titulo'])
+        self.assertIn('María', k['cuerpo'])
+        self.assertIn('11:00', k['cuerpo'])                      # la hora límite aparece en el mensaje
+        self.assertEqual(k['datos']['paciente_id'], str(self.maria.id))
+        self.assertEqual(k['datos']['fecha'], hoy_madrid().isoformat())
+
+    def test_si_hace_el_checkin_tarde_no_hay_mas_avisos(self):
+        self.avisar('12:00')                                     # primer aviso
+        self.cli('maria').post('/api/checkin', json={})          # lo hace a las 12:xx
+        avisos, envio = self.avisar('12:05')
+        self.assertEqual(avisos, 0)
+        self.assertFalse(envio.called)
+
+    def test_cambiar_la_hora_limite_a_mas_tarde_retrasa_el_aviso(self):
+        self.cli('maria').put('/api/mi-checkin/config', json={'hora_limite': '20:00'})
+        self.assertEqual(self.avisar('12:00')[0], 0)
+        self.assertEqual(self.avisar('20:00')[0], 1)
+
+
+# ---------------------------------------------------------------------------
+# Pantallas
+# ---------------------------------------------------------------------------
+class TestPantallas(BaseCheckin):
+    def test_la_pantalla_del_paciente_tiene_la_tarjeta_y_el_script(self):
+        r = self.cli('maria').get('/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'id="btn-checkin"', r.data)
+        self.assertIn(b'checkin.js', r.data)
+        self.assertIn(b'form-checkin-config', r.data)
+
+    def test_el_boton_sos_sigue_en_su_sitio(self):
+        # El check-in no debe romper el SOS (riesgo 3.18): sos.js y su botón siguen presentes y sos.js va el primero
+        r = self.cli('maria').get('/')
+        self.assertIn(b'id="boton-sos"', r.data)
+        self.assertLess(r.data.index(b'sos.js'), r.data.index(b'checkin.js'))
+
+    def test_el_panel_del_supervisor_no_lleva_la_tarjeta_del_paciente(self):
+        r = self.cli('alberto').get('/supervisor')
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn(b'btn-checkin', r.data)
+
+    def test_sin_sesion_la_pantalla_redirige_al_login(self):
+        self.assertEqual(app.test_client().get('/').status_code, 302)
+
 
 if __name__ == '__main__':
-    import unittest
     unittest.main()
