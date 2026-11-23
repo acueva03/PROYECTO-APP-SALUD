@@ -1,9 +1,9 @@
 from datetime import date, timedelta
 from base_tests import BaseTest
 from app import primera_fecha_valida, siguiente_fecha, tomas_pendientes_de
-from models import db, User, Alarm, AlertSOS, RegistroToma, ahora
+from models import db, User, Alarm, AlertSOS, RegistroToma, ahora, hoy_madrid
 
-HOY = lambda: date.today().isoformat()
+HOY = lambda: hoy_madrid().isoformat()
 
 
 class TestPermisos(BaseTest):
@@ -65,7 +65,7 @@ class TestSalud(BaseTest):
         alarma = Alarm(user_id=self.maria.id, titulo='P', hora='08:00', fecha=HOY())
         db.session.add(alarma)
         db.session.commit()
-        antigua = (date.today() - timedelta(days=40)).isoformat()
+        antigua = (hoy_madrid() - timedelta(days=40)).isoformat()
         for f in (HOY(), antigua):
             db.session.add(RegistroToma(alarma_id=alarma.id, user_id=self.maria.id, titulo='P',
                                         fecha_prevista=f, hora_prevista='08:00', estado='CONFIRMADA'))
@@ -128,7 +128,7 @@ class TestSOSyLimites(BaseTest):
 
     def test_hora_y_fecha_limite(self):
         self.login('maria')
-        manana = (date.today() + timedelta(days=1)).isoformat()
+        manana = (hoy_madrid() + timedelta(days=1)).isoformat()
 
         def crear(**kw):
             d = {'titulo': 'P', 'fecha': manana, 'hora': '10:00'}
@@ -141,8 +141,8 @@ class TestSOSyLimites(BaseTest):
         self.assertEqual(crear(hora='7:5'), 400)
         self.assertEqual(crear(fecha='2030-02-30'), 400)
         self.assertEqual(crear(titulo='   '), 400)
-        ayer = (date.today() - timedelta(days=1)).isoformat()
-        anteayer = (date.today() - timedelta(days=2)).isoformat()
+        ayer = (hoy_madrid() - timedelta(days=1)).isoformat()
+        anteayer = (hoy_madrid() - timedelta(days=2)).isoformat()
         self.assertEqual(crear(fecha=ayer), 201)
         self.assertEqual(crear(fecha=anteayer), 400)
 

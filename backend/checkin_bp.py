@@ -210,14 +210,9 @@ def guardar_config_checkin():
 # ---------------------------------------------------------------------------
 # 2) API DEL SUPERVISOR (solo lectura)
 # ---------------------------------------------------------------------------
-@checkin_bp.route('/api/supervisor/pacientes/<int:paciente_id>/checkin', methods=['GET'])
-def checkin_de_paciente(paciente_id):
-    """Estado de hoy y últimos 14 días del paciente. Usa el helper de permisos obligatorio:
-    un supervisor NO puede ver pacientes ajenos (403 también para ids inexistentes)."""
-    paciente, error = paciente_supervisado_o_403(paciente_id)
-    if error:
-        return error
-
+def resumen_checkin(paciente):
+    """Estado de hoy + últimos 14 días de UN paciente (sin comprobar permisos: quien la llame debe hacerlo).
+    La usan el endpoint de abajo y la lista de pacientes del supervisor (supervisor_bp.py)."""
     hoy = hoy_madrid()
     primer_dia = (hoy - timedelta(days=DIAS_HISTORIAL - 1)).isoformat()
     filas = CheckIn.query.filter(CheckIn.user_id == paciente.id, CheckIn.fecha >= primer_dia).all()
@@ -230,13 +225,22 @@ def checkin_de_paciente(paciente_id):
         dias.append({'fecha': fecha, **checkin_a_dict(por_fecha.get(fecha))})
 
     activo, limite = config_de(paciente.id)
-    return jsonify({
+    return {
         'estado_hoy': estado_de_hoy(paciente.id),
         'activo': activo,
         'hora_limite': limite,
         'dias': dias,
-    })
+    }
 
+
+@checkin_bp.route('/api/supervisor/pacientes/<int:paciente_id>/checkin', methods=['GET'])
+def checkin_de_paciente(paciente_id):
+    """Estado de hoy y últimos 14 días del paciente. Usa el helper de permisos obligatorio:
+    un supervisor NO puede ver pacientes ajenos (403 también para ids inexistentes)."""
+    paciente, error = paciente_supervisado_o_403(paciente_id)
+    if error:
+        return error
+    return jsonify(resumen_checkin(paciente))
 
 # ---------------------------------------------------------------------------
 # 3) AVISO DE CHECK-IN NO REALIZADO (la llama /interno/tick de P4)

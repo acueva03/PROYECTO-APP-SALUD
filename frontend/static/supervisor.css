@@ -368,3 +368,51 @@
 }
 
 .banner-sos .btn { min-height: 44px; }
+
+/* ---------- Check-in diario en las tarjetas del Resumen (P5, 5.7) ---------- */
+.checkin-resumen {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.checkin-estado { font-weight: 700; }
+
+/* Mini-línea de 14 puntos: lleno = check-in hecho, hueco = sin hacer (no depende solo del color) */
+.checkin-puntos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.checkin-punto {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    border: 2px solid var(--color-texto-suave);
+    background-color: transparent;
+}
+
+.checkin-punto.hecho {
+    background-color: var(--color-ok);
+    border-color: var(--color-ok);
+}
+
+/* El último punto es HOY: lleva un aro exterior para localizarlo */
+.checkin-punto.hoy { outline: 2px solid var(--color-primario); outline-offset: 2px; }
+
+.checkin-recuento { font-size: 0.85rem; }
+
+/* ---------- Aviso destacado: check-in NO realizado (P5, 5.7 punto 3) ---------- */
+/* OJO: ".toma-tarde" solo estaba definida dentro de ".lista-tomas", así que aquí hace falta una regla propia */
+.checkin-estado.toma-tarde {
+    color: var(--color-peligro-oscuro);
+    background-color: var(--color-peligro-fondo);
+    border-left: 4px solid var(--color-peligro);
+    border-radius: var(--radio-boton);
+    padding: 0.4rem 0.6rem;
+    font-weight: 800;
+}
+
+/* La tarjeta entera con borde rojo (sin cambiar el fondo, que es el de un SOS) */
+.tarjeta-paciente.con-checkin-perdido { border-color: var(--color-peligro); }

@@ -207,7 +207,7 @@ class TestAvisoCheckinPerdido(BaseCheckin):
 
     def test_al_dia_siguiente_vuelve_a_avisar(self):
         self.avisar('12:00')
-        manana = date.today() + timedelta(days=1)
+        manana = hoy_madrid() + timedelta(days=1)
         with patch('checkin_bp.hoy_madrid', return_value=manana):
             avisos, _ = self.avisar('12:00')
         self.assertEqual(avisos, 1)
@@ -412,6 +412,60 @@ class TestAvisoCasosExtra(BaseCheckin):
         self.cli('maria').put('/api/mi-checkin/config', json={'hora_limite': '20:00'})
         self.assertEqual(self.avisar('12:00')[0], 0)
         self.assertEqual(self.avisar('20:00')[0], 1)
+
+
+# ---------------------------------------------------------------------------
+# Resumen del supervisor: el check-in de cada paciente en GET /api/supervisor/pacientes (tarea 5.7)
+# ---------------------------------------------------------------------------
+class TestResumenCheckinSupervisor(BaseCheckin):
+    def setUp(self):
+        super().setUp()
+        self.alberto.dependientes.append(self.rosa)          # Alberto supervisa a María y a Rosa
+        db.session.commit()
+
+    def resumen(self, hora='09:00'):
+        """{nombre: checkin_hoy} de los pacientes de Alberto, como si fuera esa hora de Madrid."""
+        with patch('checkin_bp.hora_madrid', return_value=hora):
+            datos = self.cli('alberto').get('/api/supervisor/pacientes').get_json()
+        return {p['nombre']: p['checkin_hoy'] for p in datos}
+
+    def test_cada_paciente_trae_su_checkin_con_14_dias(self):
+        r = self.resumen()
+        self.assertEqual(sorted(r), ['María', 'Rosa'])
+        for c in r.values():
+            self.assertEqual(len(c['dias']), 14)
+            self.assertEqual(c['dias'][-1]['fecha'], hoy_madrid().isoformat())   # el último día es hoy
+            self.assertEqual(c['hora_limite'], '11:00')
+
+    def test_pendiente_y_no_realizado_segun_la_hora(self):
+        self.assertEqual(self.resumen('10:59')['María']['estado_hoy'], 'PENDIENTE')
+        self.assertEqual(self.resumen('11:00')['María']['estado_hoy'], 'NO_REALIZADO')
+
+    def test_hecho_no_se_mezcla_entre_pacientes(self):
+        self.cli('maria').post('/api/checkin', json={'estado_animo': 'Contento'})
+        r = self.resumen('12:00')
+        self.assertEqual(r['María']['estado_hoy'], 'HECHO')
+        self.assertTrue(r['María']['dias'][-1]['hecho'])
+        self.assertEqual(r['Rosa']['estado_hoy'], 'NO_REALIZADO')     # lo de María no cuenta para Rosa
+        self.assertFalse(r['Rosa']['dias'][-1]['hecho'])
+
+    def test_desactivado_se_ve_como_desactivado(self):
+        db.session.add(CheckinConfig(user_id=self.rosa.id, hora_limite='11:00', activo=False))
+        db.session.commit()
+        r = self.resumen('12:00')
+        self.assertEqual(r['Rosa']['estado_hoy'], 'DESACTIVADO')
+        self.assertEqual(r['María']['estado_hoy'], 'NO_REALIZADO')
+
+    def test_el_resumen_coincide_con_el_endpoint_de_un_paciente(self):
+        # La lista y el endpoint individual deben dar exactamente la misma información
+        with patch('checkin_bp.hora_madrid', return_value='12:00'):
+            c = self.cli('alberto')
+            lista = {p['id']: p['checkin_hoy'] for p in c.get('/api/supervisor/pacientes').get_json()}
+            individual = c.get(f'/api/supervisor/pacientes/{self.maria.id}/checkin').get_json()
+        self.assertEqual(lista[self.maria.id], individual)
+
+    def test_un_supervisor_sin_pacientes_no_recibe_nada(self):
+        self.assertEqual(self.cli('lucia').get('/api/supervisor/pacientes').get_json(), [])
 
 
 # ---------------------------------------------------------------------------

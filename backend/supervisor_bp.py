@@ -72,6 +72,9 @@ def listar_pacientes_supervisor():
     # fecha de corte en UTC "ingenua" (sin zona), que es como las guarda SQLite
     desde = (ahora() - timedelta(hours=HORAS_TOMAS_PENDIENTES)).replace(tzinfo=None)
 
+    # Se importa AQUÍ y no arriba del archivo: checkin_bp.py ya importa supervisor_bp.py y, si no, se haría un círculo
+    from checkin_bp import resumen_checkin
+
     resultado = []
     for p in sup.dependientes:
         sos_activas = AlertSOS.query.filter_by(user_id=p.id, estado='ACTIVA').count()
@@ -93,6 +96,8 @@ def listar_pacientes_supervisor():
             'sos_activo': sos_activas > 0,
             'tomas_pendientes': pendientes,
             'ultima_toma': a_iso_utc(ultima.confirmada_en) if ultima else None,
+            # Check-in diario: estado de hoy + últimos 14 días, para la tarjeta del Resumen
+            'checkin_hoy': resumen_checkin(p),
         })
 
     # Los pacientes con SOS activo salen primero; el resto, por orden alfabético

@@ -198,6 +198,51 @@
     }
 
     // ---------- Tarjetas del Resumen ----------
+        // ---------- Check-in diario «Estoy bien» ----------
+    // Recibe p.checkin_hoy (lo manda /api/supervisor/pacientes) y devuelve el bloque que va dentro de la tarjeta:
+    //   1) una línea de texto con el estado de hoy (hecho a las HH:MM / pendiente / no realizado / desactivado)
+    //   2) una mini-línea de 14 puntos: el último punto es HOY; punto lleno = hecho, hueco = sin hacer.
+    // El estado no depende solo del color: lleva icono y texto, y los puntos se distinguen por relleno.
+    function crearBloqueCheckin(c) {
+        const bloque = document.createElement('div');
+        bloque.className = 'checkin-resumen';
+
+        const hoy = c.dias[c.dias.length - 1];              // el último día de la lista es hoy
+        const linea = document.createElement('p');
+        linea.className = 'checkin-estado';
+        if (c.estado_hoy === 'HECHO') {
+            linea.textContent = '✓ Check-in: hecho a las ' + hoy.hora;
+        } else if (c.estado_hoy === 'PENDIENTE') {
+            linea.textContent = '⏳ Check-in: pendiente (hasta las ' + c.hora_limite + ')';
+        } else if (c.estado_hoy === 'NO_REALIZADO') {
+            linea.textContent = '⚠ Check-in: no realizado (el límite era a las ' + c.hora_limite + ')';
+            linea.classList.add('toma-tarde');          // aviso destacado: rojo con fondo (ver supervisor.css)
+        } else {
+            linea.textContent = 'Check-in desactivado por el paciente';     // DESACTIVADO
+        }
+
+        const puntos = document.createElement('div');
+        puntos.className = 'checkin-puntos';
+        const hechos = c.dias.filter(d => d.hecho).length;
+        puntos.setAttribute('role', 'img');
+        puntos.setAttribute('aria-label', 'Check-in de los últimos ' + c.dias.length + ' días: ' + hechos + ' hechos');
+        c.dias.forEach((d, i) => {
+            const punto = document.createElement('span');
+            punto.className = 'checkin-punto' + (d.hecho ? ' hecho' : '') + (i === c.dias.length - 1 ? ' hoy' : '');
+            // dd/mm del día (la fecha viene como AAAA-MM-DD)
+            punto.title = d.fecha.split('-').reverse().join('/').slice(0, 5) + (d.hecho ? ': hecho' : ': sin hacer');
+            puntos.append(punto);
+        });
+
+        const resumen = document.createElement('span');
+        resumen.className = 'texto-suave checkin-recuento';
+        resumen.textContent = hechos + ' de ' + c.dias.length + ' días';
+
+        bloque.append(linea, puntos, resumen);
+        return bloque;
+    }
+
+
     function crearTarjeta(p) {
         const tarjeta = document.createElement('article');
         tarjeta.className = 'tarjeta-paciente' + (p.sos_activo ? ' con-sos' : '');
@@ -227,7 +272,11 @@
         boton.textContent = 'Ver a ' + p.nombre;
         boton.addEventListener('click', () => abrir(p.id));
 
-        tarjeta.append(cabecera, estado, detalle, boton);
+        // Check-in diario (P5): solo si el servidor lo manda
+        const checkin = p.checkin_hoy ? crearBloqueCheckin(p.checkin_hoy) : null;
+        // Si el check-in no se hizo a tiempo, toda la tarjeta lleva el borde rojo (como con un SOS)
+        if (p.checkin_hoy && p.checkin_hoy.estado_hoy === 'NO_REALIZADO') tarjeta.classList.add('con-checkin-perdido');
+        tarjeta.append(cabecera, estado, detalle, ...(checkin ? [checkin] : []), boton);
         return tarjeta;
     }
 
