@@ -7,7 +7,7 @@ Marca cada punto; si alguno falla, no se entrega.
 ## 1. Botón SOS (sos.js)
 
 - [ ] Pulsar SOS con conexión: «Aviso enviado. Tu supervisor ha sido notificado.» y el panel del supervisor suena.
-- [ ] Apagar el Wi-Fi y pulsar SOS: mensaje en rojo «Error de conexión… LLAME AL 112» y botón «📞 Llamar al 112» que abre el marcador.
+- [ ] Apagar el Wi-Fi / activar modo avión y pulsar SOS: mensaje en rojo «Error de conexión… LLAME AL 112» y botón «📞 Llamar al 112» que abre el marcador telefónico sin conexión.
 - [ ] Cerrar sesión en otra pestaña y pulsar SOS: dice que la sesión ha caducado (no «sin conexión»).
 
 ## 2. Alarmas
@@ -37,9 +37,25 @@ Marca cada punto; si alguno falla, no se entrega.
 - [x] «Ajustes de letra, contraste y voz»: letra muy grande, alto contraste y voz. Recargar: se mantienen.
 - [x] Con voz activada, el aviso de alarma se lee en voz alta y «🔊 Leer en voz alta» lo repite.
 - [x] Navegar con el teclado (Tab): el foco siempre se ve y el aviso de alarma recibe el foco al aparecer.
-- [x] Con letra muy grande, en el móvil no hay que desplazarse a los lados.
+- [x] Con letra muy grande, en el móvil no hay que desplazarse a los lados (sin scroll horizontal).
 
-## 6. Errores (3.18)
+## 6. PWA instalable y modo sin conexión (2.6)
 
-- [x] Consola del navegador (F12) sin errores en rojo durante el uso normal.
-- [x] `npx eslint frontend/static` sin errores y los tests de `backend` en verde.
+- [ ] **Detección del Service Worker:** En DevTools (`F12` > *Application* > *Service Workers*), `/sw.js` aparece activo y en ejecución (`activated and is running`) con ámbito `/`.
+- [ ] **Manifiesto Web:** En DevTools (*Application* > *Manifest*), reconoce el nombre «App Salud», `start_url: /`, visualización `standalone`, `theme-color: #0F2C59` y la galería de iconos (incluyendo el icono adaptable *maskable*).
+- [ ] **Instalación como App:** Aparece el botón «Instalar App Salud» en la barra de URL o en el menú del navegador. Al instalarse, se abre en ventana independiente sin interfaz de navegador (*standalone*).
+- [ ] **Comprobación en móvil (Android / iOS):**
+  - En Android (Chrome): opción «Instalar aplicación» / «Añadir a pantalla de inicio» con su icono y nombre propios.
+  - En iOS (Safari): botón «Compartir» > «Añadir a pantalla de inicio», abre en pantalla completa.
+- [ ] **Modo sin conexión (Offline):** Activar modo avión o marcar *Offline* en DevTools y recargar la página:
+  - Aparece la pantalla de contingencia `/offline` («Sin conexión a internet»).
+  - El botón «Reintentar conexión» funciona al restablecer la red.
+  - El botón «Llamar al 112» (`tel:112`) está visible y abre el marcador del teléfono para emergencias inmediatas.
+- [ ] **Seguridad médica (crítico):** Comprobar en DevTools (*Network*) que las peticiones a `/api/*` y peticiones no-GET jamás se leen de la caché; siempre van directas a la red.
+- [ ] **Auditoría Lighthouse:** Ejecutar Lighthouse (*Progressive Web App*) en Chrome DevTools y validar que la app cumple los requisitos de «Installable».
+
+## 7. Errores y Calidad (3.18)
+
+- [x] Consola del navegador (F12) sin errores en rojo durante el uso normal (incluidos registros de `pwa.js` y `sw.js`).
+- [x] `npx eslint frontend/static` sin errores (sin bloques `catch` vacíos, regla 3.18.2).
+- [x] Todos los tests de `backend` en verde (incluido `test_pwa.py`), sin tocar la base de datos real.
