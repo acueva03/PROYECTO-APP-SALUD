@@ -3,7 +3,7 @@ import secrets
 import threading
 import time
 from datetime import datetime, timedelta, timezone, date
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, make_response
 from sqlalchemy import inspect, text, or_
 from models import (db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma,
                     PesoRegistro, CodigoVinculo, IntentoVinculo, IntentoLogin, VinculoLog,
@@ -969,6 +969,20 @@ def hora_servidor():
         'hora': en_madrid.strftime('%H:%M'),
         'zona': 'Europe/Madrid'
     })
+
+@app.route('/sw.js')
+def service_worker():
+    """PWA: Sirve el Service Worker desde la raíz con los encabezados requeridos."""
+    response = make_response(send_from_directory(app.static_folder, 'sw.js'))
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+@app.route('/offline')
+def pagina_offline():
+    """PWA: Pantalla de respaldo servida cuando falla la conexión."""
+    return render_template('offline.html')
 
 @app.errorhandler(500)
 def error_interno(e):

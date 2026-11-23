@@ -271,6 +271,12 @@ body {
 }
 .btn-secundario:hover { background-color: var(--color-primario-suave); }
 
+.btn-peligro {
+    background-color: var(--color-peligro-oscuro);
+    color: #FFFFFF;
+}
+.btn-peligro:hover { background-color: #8E0000; }
+
 .btn-ancho  { width: 100%; }
 .btn-grande { font-size: 1.35rem; padding: 1rem 2.5rem; }
 

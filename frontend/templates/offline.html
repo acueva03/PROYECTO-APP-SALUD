@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block titulo %}Sin conexión - App Salud{% endblock %}
+{% block subtitulo %}Modo sin conexión{% endblock %}
+{% block clase_contenedor %}contenedor-estrecho{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta" aria-labelledby="titulo-offline">
+    <div class="tarjeta-cabecera">
+        <h2 id="titulo-offline">Sin conexión a internet</h2>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+        <p class="texto-suave">
+            No se ha podido conectar con el servidor. Comprueba tu conexión wifi o datos móviles e inténtalo de nuevo.
+        </p>
+
+        <button type="button" class="btn btn-primario btn-ancho" id="btn-reintentar" onclick="window.location.reload()">
+            Reintentar conexión
+        </button>
+
+        <hr style="border: 0; border-top: 1px solid var(--color-borde); margin: 0.5rem 0;">
+
+        <div class="banner-peligro" style="padding: 1rem; border-radius: var(--radio-boton); text-align: center;">
+            <p style="font-weight: bold; margin-bottom: 0.5rem;">¿Tienes una emergencia médica?</p>
+            <p style="font-size: 0.95rem; margin-bottom: 0.8rem;">
+                Si necesitas ayuda inmediata y no hay conexión con el servidor, llama directamente al servicio de emergencias:
+            </p>
+            <a href="tel:112" class="btn btn-peligro btn-ancho" style="text-decoration: none;">
+                Llamar al 112
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block pie %}App Salud - Modo sin conexión{% endblock %}
