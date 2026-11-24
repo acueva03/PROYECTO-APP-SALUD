@@ -20,3 +20,11 @@ backups/
 # Node (ESLint) y cobertura
 node_modules/
 .coverage
+# App movil (Capacitor / Android)
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/android/app/google-services.json
+*.apk
+*.aab
