@@ -20,14 +20,25 @@ class TestUrlBaseDeDatos(unittest.TestCase):
     def test_la_variable_tiene_prioridad(self):
         self.assertEqual(url_base_de_datos({'DATABASE_URL': 'sqlite:///:memory:'}, 'x.db'), 'sqlite:///:memory:')
 
-    def test_postgres_a_postgresql(self):
+    def test_postgres_a_postgresql_con_driver(self):
         # Render, Heroku y otros dan "postgres://", pero SQLAlchemy solo entiende "postgresql://"
         url = url_base_de_datos({'DATABASE_URL': 'postgres://u:p@host/bd'}, 'x.db')
-        self.assertEqual(url, 'postgresql://u:p@host/bd')
+        self.assertEqual(url, 'postgresql+psycopg2://u:p@host/bd')
 
-    def test_postgresql_no_se_toca(self):
-        url = 'postgresql://u:p@host/bd?sslmode=require'
+    def test_postgresql_recibe_el_driver_psycopg2(self):
+        # Sin driver, SQLAlchemy 2.1 busca psycopg (v3), que no está instalado: la app no arrancaba en Render
+        url = url_base_de_datos({'DATABASE_URL': 'postgresql://u:p@host/bd?sslmode=require'}, 'x.db')
+        self.assertEqual(url, 'postgresql+psycopg2://u:p@host/bd?sslmode=require')
+
+    def test_un_driver_explicito_se_respeta(self):
+        url = 'postgresql+psycopg://u:p@host/bd'
         self.assertEqual(url_base_de_datos({'DATABASE_URL': url}, 'x.db'), url)
+
+    def test_la_url_resultante_usa_el_dialecto_psycopg2(self):
+        # Se comprueba con SQLAlchemy de verdad (sin conectar): el driver elegido es psycopg2
+        from sqlalchemy.engine import make_url
+        url = url_base_de_datos({'DATABASE_URL': 'postgres://u:p@host/bd'}, 'x.db')
+        self.assertEqual(make_url(url).get_dialect().driver, 'psycopg2')
 
 
 class TestOpcionesMotor(unittest.TestCase):

@@ -11,12 +11,16 @@ def url_base_de_datos(entorno, ruta_sqlite):
     - Si hay DATABASE_URL (la usan los tests y el servidor en la nube), se usa esa.
     - Si no, el archivo SQLite local de siempre (ruta_sqlite).
     Algunos proveedores dan la URL como "postgres://..." y SQLAlchemy solo acepta "postgresql://...".
+    Además se fija el driver (psycopg2): sin él, las versiones nuevas de SQLAlchemy buscan psycopg (v3),
+    que no está instalado, y la app no arranca ("No module named 'psycopg'").
     """
     url = (entorno.get('DATABASE_URL') or '').strip()
     if not url:
         return 'sqlite:///' + ruta_sqlite
     if url.startswith('postgres://'):
         url = 'postgresql://' + url[len('postgres://'):]
+    if url.startswith('postgresql://'):          # sin driver explícito (los que ya lo llevan, como +psycopg, se respetan)
+        url = 'postgresql+psycopg2://' + url[len('postgresql://'):]
     return url
 
 
