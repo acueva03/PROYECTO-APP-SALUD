@@ -1,0 +1,26 @@
+# Despliegue en Render (https://render.com): "New > Blueprint" y elegir este repositorio.
+# Las variables marcadas con "sync: false" NO están aquí a propósito (son secretos): se escriben
+# a mano en el panel de Render (Environment). Nunca se suben al repositorio.
+services:
+  - type: web
+    name: app-salud
+    runtime: python
+    region: frankfurt                  # UE: son datos de salud (RGPD)
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    # Un solo proceso: la tarea periódica (/interno/tick) es idempotente, pero así no hay dos arranques creando tablas a la vez
+    startCommand: gunicorn --chdir backend app:app --workers 1 --threads 4 --bind 0.0.0.0:$PORT
+    healthCheckPath: /salud            # responde 200 si la base de datos contesta
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: PRODUCCION                # cookies de sesión solo por HTTPS
+        value: "1"
+      - key: SECRET_KEY                # Render la genera una vez y la conserva entre despliegues
+        generateValue: true
+      - key: DATABASE_URL              # cadena de conexión de PostgreSQL (Neon, Render Postgres...)
+        sync: false
+      - key: FIREBASE_CREDENTIALS      # contenido del JSON de la cuenta de servicio de Firebase (notificaciones push)
+        sync: false
+      - key: CRON_TOKEN                # clave que debe enviar el cron en la cabecera X-Cron-Token hacia /interno/tick
+        sync: false
