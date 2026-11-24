@@ -39,7 +39,8 @@ El proyecto ha sido gestionado bajo un marco de trabajo ágil adaptado, basado e
 
 ```
 backend/     Servidor Flask: app.py (rutas y API), models.py (base de datos SQLite),
-             validaciones.py, vinculos.py, esquema.py, backup_bd.py, seed.py y los tests (test_*.py)
+             blueprints, validaciones.py, vinculos.py, esquema.py, backup_bd.py, seed.py
+  tests/     Tests unitarios y de integración (test_*.py) y base_tests.py
 frontend/
   templates/ Pantallas HTML (login, registro, paciente, supervisor, vincular, supervisor_salud)
   static/    JavaScript y CSS de cada pantalla
@@ -56,7 +57,7 @@ Archivos de JavaScript relevantes: `sos.js` (botón SOS, independiente del resto
 
 - Toda columna nueva de la base de datos se añade en `models.py` **y** en `actualizar_columnas()` en el mismo commit.
 - Antes de ejecutar los tests, haz una copia de seguridad: `python3 backend/backup_bd.py`.
-- Los tests usan una base de datos en memoria (`base_tests.py` lo comprueba) y nunca deben tocar `app_salud.db`.
+- Los tests usan una base de datos en memoria (`tests/base_tests.py` lo comprueba) y nunca deben tocar `app_salud.db`.
 - Cada funcionalidad nueva lleva, como mínimo, 3 tests.
 
 ## 4. Guía para Usuarios (Cómo usar la app)
@@ -93,16 +94,16 @@ Para ejecutar el código Python que da el enlace a la web con Flask, en la termi
 
 1. `python3 backend/backup_bd.py` (copia de seguridad de la base de datos)
 2. `cd backend`
-3. Todas a la vez: `python3 -m unittest discover -p "test_*.py" -v`
+3. Todas a la vez: `python3 -m unittest discover -v`
 4. O una a una, por ejemplo:
-   - `python3 -m unittest test_app -v`
-   - `python3 -m unittest test_registro -v`
-   - `python3 -m unittest test_vinculos -v`
-   - `python3 -m unittest test_reloj -v`
-   - `python3 -m unittest test_supervisor_salud -v`
-   - `python -m unittest test_sesion -v`
-   - `python3 -m unittest test_paciente_riesgos -v`
-   - `python -m unittest test_notificaciones -v`
+   - `python3 -m unittest tests.test_app -v`
+   - `python3 -m unittest tests.test_registro -v`
+   - `python3 -m unittest tests.test_vinculos -v`
+   - `python3 -m unittest tests.test_reloj -v`
+   - `python3 -m unittest tests.test_supervisor_salud -v`
+   - `python3 -m unittest tests.test_sesion -v`
+   - `python3 -m unittest tests.test_paciente_riesgos -v`
+   - `python3 -m unittest tests.test_notificaciones -v`
 
 Antes de cada entrega se repasa la lista de [`doc/PRUEBAS_MANUALES.md`](doc/PRUEBAS_MANUALES.md). Las pruebas de JavaScript se comprueban con ESLint (`npm install` y después `npx eslint`), y el mismo análisis y los tests se ejecutan automáticamente en GitHub Actions en cada push.
 

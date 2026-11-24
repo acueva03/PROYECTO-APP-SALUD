@@ -1,4 +1,11 @@
 import os
+import sys
+
+# Asegurar que 'backend' esté en sys.path antes de importar app
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'   # SIEMPRE antes de importar app
 
 import unittest
