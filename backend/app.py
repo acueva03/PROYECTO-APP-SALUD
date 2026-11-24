@@ -13,6 +13,7 @@ from validaciones import (normalizar_username, validar_username,
                           validar_password, username_desde_nombre)
 from ficha import validar_ficha
 from esquema import comprobar_esquema
+from config_bd import url_base_de_datos, opciones_motor, describir_url
 from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_codigo,
                       formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
                       VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
@@ -47,13 +48,13 @@ app.config['SESSION_COOKIE_SECURE'] = os.environ.get('PRODUCCION') == '1'   # so
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)               # 3.17: la sesión dura 30 días
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-# CAMBIADO: si existe la variable DATABASE_URL (la usan los tests) se usa esa base de datos;
-# si no, la real app_salud.db
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or ('sqlite:///' + os.path.join(BASE_DIR, 'app_salud.db'))
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'connect_args': {'check_same_thread': False, 'timeout': 15}
-}
+# Base de datos (config_bd.py): si existe DATABASE_URL se usa esa (los tests, o PostgreSQL en el servidor);
+# si no, el archivo SQLite local app_salud.db. Las opciones de conexión dependen del motor.
+URL_BD = url_base_de_datos(os.environ, os.path.join(BASE_DIR, 'app_salud.db'))
+app.config['SQLALCHEMY_DATABASE_URI'] = URL_BD
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = opciones_motor(URL_BD)
+print('Base de datos:', describir_url(URL_BD))      # sin contraseña
 
 db.init_app(app)
 
@@ -70,7 +71,7 @@ def actualizar_columnas():
                    ('ultima_vez_sono', 'DATETIME'),
                    ('dosis', 'VARCHAR(50)'),
                    ('dias_semana', 'VARCHAR(20)'),
-                   ('eliminada', 'BOOLEAN NOT NULL DEFAULT 0'),     # riesgo 3.14 (borrado lógico)
+                   ('eliminada', 'BOOLEAN NOT NULL DEFAULT FALSE'),  # riesgo 3.14 (borrado lógico); FALSE vale en SQLite y PostgreSQL (0 no)
                    ('eliminada_en', 'DATETIME')],
         'registros_toma': [('dosis', 'VARCHAR(50)')],
         'users': [('username', 'VARCHAR(50)'),
@@ -85,8 +86,9 @@ def actualizar_columnas():
                     con.execute(text(f'ALTER TABLE {tabla} ADD COLUMN {nombre} {tipo}'))
         # NUEVO: SQLite no deja añadir UNIQUE con ALTER TABLE, así que se hace con un índice único
         con.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username)'))
-        con.execute(text('UPDATE alarms SET fecha = :hoy WHERE fecha IS NULL AND activa = 1'),
-                    {'hoy': hoy_madrid().isoformat()})
+        # activa = :activa con True (no "= 1"): PostgreSQL no compara un booleano con un entero
+        con.execute(text('UPDATE alarms SET fecha = :hoy WHERE fecha IS NULL AND activa = :activa'),
+                    {'hoy': hoy_madrid().isoformat(), 'activa': True})
 
 # NUEVO: da username a los usuarios que ya existían (Alberto -> alberto)
 def rellenar_usernames():
@@ -328,6 +330,8 @@ def crear_alarma():
 
     titulo = (data.get('titulo') or '').strip()
     if not titulo: return jsonify({'error': 'Falta titulo'}), 400
+    # La columna es VARCHAR(100): SQLite no lo exige pero PostgreSQL rechaza un texto más largo (daría un 500)
+    if len(titulo) > 100: return jsonify({'error': 'El título no puede superar 100 caracteres'}), 400
     
     if datetime.strptime(data['fecha'], '%Y-%m-%d').date() < hoy_madrid() - timedelta(days=1):
         return jsonify({'error': 'La fecha no puede estar en el pasado'}), 400
@@ -969,6 +973,17 @@ def hora_servidor():
         'hora': en_madrid.strftime('%H:%M'),
         'zona': 'Europe/Madrid'
     })
+
+@app.route('/salud', methods=['GET'])
+def comprobar_salud():
+    """Healthcheck del servidor en la nube: comprueba que la base de datos responde. Sin sesión ni datos personales."""
+    try:
+        db.session.execute(text('SELECT 1'))
+    except Exception as e:
+        db.session.rollback()
+        print('ERROR /salud: la base de datos no responde:', e)
+        return jsonify({'ok': False}), 503
+    return jsonify({'ok': True}), 200
 
 @app.route('/sw.js')
 def service_worker():

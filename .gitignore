@@ -28,3 +28,7 @@ mobile/android/local.properties
 mobile/android/app/google-services.json
 *.apk
 *.aab
+
+# Claves privadas de Firebase (cuenta de servicio): NUNCA al repositorio
+*firebase-adminsdk*.json
+serviceAccount*.json
