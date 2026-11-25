@@ -5,11 +5,12 @@
 # (menos conflictos de merge). Aquí van:
 #   1) el helper de permisos paciente_supervisado_o_403 (el que usan P2, P3 y P4)
 #   2) los endpoints nuevos del panel del supervisor
-from datetime import timedelta, timezone
+from datetime import timedelta
 
 from flask import Blueprint, jsonify, session
 
-from models import db, User, Alarm, AlertSOS, RegistroToma, ahora
+from models import db, User, Alarm, AlertSOS, RegistroToma, ahora, a_iso_utc
+from validaciones import dias_a_lista
 
 supervisor_bp = Blueprint('supervisor_bp', __name__)
 
@@ -20,16 +21,25 @@ HORAS_TOMAS_PENDIENTES = 24
 # ---------------------------------------------------------------------------
 # Utilidades pequeñas
 # ---------------------------------------------------------------------------
+MSG_SESION_CADUCADA = 'Tu sesión ha caducado. Vuelve a iniciar sesión.'
+MSG_NO_ES_PACIENTE = ('Esta acción es solo para cuentas de paciente. Si tienes varias pestañas abiertas, '
+                      'es posible que hayas iniciado sesión con otra cuenta en este mismo navegador: recarga la página.')
+
+
 def usuario_actual():
     """El usuario de la sesión, o None si no ha iniciado sesión."""
     user_id = session.get('user_id')
     return db.session.get(User, user_id) if user_id else None
 
 
-def a_iso_utc(fecha):
-    """SQLite guarda las fechas sin zona horaria (siempre en UTC).
-    Aquí se les pone 'UTC' para que el navegador las convierta bien a su hora local."""
-    return fecha.replace(tzinfo=timezone.utc).isoformat() if fecha else None
+def paciente_o_error():
+    """Devuelve (paciente, None) o (None, respuesta_de_error)."""
+    usuario = usuario_actual()
+    if not usuario:
+        return None, (jsonify({'error': MSG_SESION_CADUCADA}), 401)
+    if usuario.rol != 'dependiente':
+        return None, (jsonify({'error': MSG_NO_ES_PACIENTE}), 403)
+    return usuario, None
 
 
 def supervisor_actual_o_error():
@@ -148,7 +158,7 @@ def medicacion_de_paciente(paciente_id):
             'id': a.id, 'titulo': a.titulo, 'hora': a.hora, 'fecha': a.fecha,
             'dosis': a.dosis, 'activa': a.activa, 'es_repetitiva': a.es_repetitiva,
             # '0,2,4' -> [0, 2, 4]  (lunes=0 ... domingo=6). [] = todos los días
-            'dias': sorted({int(x) for x in (a.dias_semana or '').split(',') if x.strip().isdigit()}),
+            'dias': dias_a_lista(a.dias_semana),
         } for a in alarmas],
         'eliminadas': [{
             'id': a.id, 'titulo': a.titulo, 'hora': a.hora, 'dosis': a.dosis,

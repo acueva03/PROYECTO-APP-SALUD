@@ -10,7 +10,7 @@
         const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {
             const r = await fetch(url, { ...opciones, signal: controller.signal });
-            const datos = await r.json();
+            const datos = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(datos.error || 'HTTP ' + r.status);
             return datos;
         } finally {

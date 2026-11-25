@@ -5,9 +5,8 @@ import os
 import json
 import logging
 import threading
-from datetime import datetime, timezone
 
-from models import db, DispositivoPush, User, AvisoEnviado, ahora
+from models import db, DispositivoPush, User, AvisoEnviado
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +156,20 @@ def _enviar_a_tokens(tokens, tipo, titulo, cuerpo, datos=None):
     return enviados
 
 
+def _despachar_tokens(tokens, tipo, titulo, cuerpo, datos, en_segundo_plano):
+    """Envía a una lista de tokens en segundo plano o de forma síncrona según el entorno."""
+    if en_segundo_plano and not os.environ.get('TESTING'):
+        hilo = threading.Thread(
+            target=_enviar_a_tokens,
+            args=(tokens, tipo, titulo, cuerpo, datos),
+            daemon=True
+        )
+        hilo.start()
+    else:
+        _enviar_a_tokens(tokens, tipo, titulo, cuerpo, datos)
+    return len(tokens)
+
+
 # ---------------------------------------------------------------------------
 # Funciones Públicas (Contrato oficial)
 # ---------------------------------------------------------------------------
@@ -171,18 +184,7 @@ def enviar_a_usuario(user_id, tipo, titulo, cuerpo, datos=None, en_segundo_plano
             return 0
 
         tokens = [d.token for d in dispositivos]
-
-        if en_segundo_plano and not os.environ.get('TESTING'):
-            hilo = threading.Thread(
-                target=_enviar_a_tokens,
-                args=(tokens, tipo, titulo, cuerpo, datos),
-                daemon=True
-            )
-            hilo.start()
-        else:
-            _enviar_a_tokens(tokens, tipo, titulo, cuerpo, datos)
-
-        return len(tokens)
+        return _despachar_tokens(tokens, tipo, titulo, cuerpo, datos, en_segundo_plano)
     except Exception as e:
         logger.error(f"Error en enviar_a_usuario(user_id={user_id}, tipo={tipo}): {e}")
         return 0
@@ -204,18 +206,7 @@ def enviar_a_supervisores_de(paciente_id, tipo, titulo, cuerpo, datos=None, en_s
             return 0
 
         tokens = [d.token for d in dispositivos]
-
-        if en_segundo_plano and not os.environ.get('TESTING'):
-            hilo = threading.Thread(
-                target=_enviar_a_tokens,
-                args=(tokens, tipo, titulo, cuerpo, datos),
-                daemon=True
-            )
-            hilo.start()
-        else:
-            _enviar_a_tokens(tokens, tipo, titulo, cuerpo, datos)
-
-        return len(tokens)
+        return _despachar_tokens(tokens, tipo, titulo, cuerpo, datos, en_segundo_plano)
     except Exception as e:
         logger.error(f"Error en enviar_a_supervisores_de(paciente_id={paciente_id}, tipo={tipo}): {e}")
         return 0

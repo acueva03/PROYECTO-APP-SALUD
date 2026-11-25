@@ -34,7 +34,7 @@
                 body: JSON.stringify({ codigo: input.value }),
                 signal: controller.signal
             });
-            const datos = await r.json();
+            const datos = await r.json().catch(() => ({}));
             if (!r.ok) {
                 mostrar(datos.error || 'No se pudo vincular', false);
                 return;
@@ -136,7 +136,7 @@
         const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {
             const r = await fetch('/api/vinculos/pacientes', { signal: controller.signal });
-            const datos = await r.json();
+            const datos = await r.json().catch(() => ({}));
             if (!r.ok) {
                 mostrarPacientes(datos.error || 'No se pudo cargar la lista', false);
                 return;
@@ -158,7 +158,7 @@
         const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {
             const r = await fetch('/api/vinculos/pacientes/' + paciente.id, { method: 'DELETE', signal: controller.signal });
-            const datos = await r.json();
+            const datos = await r.json().catch(() => ({}));
             if (!r.ok) {
                 mostrarPacientes(datos.error || 'No se pudo desvincular', false);
                 boton.disabled = false;

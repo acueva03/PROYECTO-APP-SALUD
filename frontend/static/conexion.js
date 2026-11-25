@@ -95,6 +95,8 @@ function textoRepeticion(alarma) {
 // fetch con tiempo máximo. El cuerpo se construye ANTES de llamar (fuera del try de red, 3.18.1):
 // así un fallo al prepararlo es un error de código y no se confunde con "sin conexión".
 // Devuelve la respuesta; lanza ErrorServidor si no es 2xx, o el error de red tal cual.
+let sesionCaducadaMostrada = false;
+
 async function pedir(url, { metodo = 'GET', cuerpo, timeout = TIMEOUT_MS } = {}) {
     const opciones = { method: metodo };
     if (cuerpo !== undefined) {
@@ -111,8 +113,11 @@ async function pedir(url, { metodo = 'GET', cuerpo, timeout = TIMEOUT_MS } = {})
         clearTimeout(timeoutId);
     }
     if (respuesta.status === 401) {               // sesión caducada: banner y a iniciar sesión (riesgo 3.17)
-        document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
-        setTimeout(() => { window.location.href = '/login'; }, 3000);
+        if (!sesionCaducadaMostrada) {
+            sesionCaducadaMostrada = true;
+            document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
+            setTimeout(() => { window.location.href = '/login'; }, 3000);
+        }
         throw new Errores.ErrorServidor(401, 'Tu sesión ha caducado');
     }
     if (!respuesta.ok) {

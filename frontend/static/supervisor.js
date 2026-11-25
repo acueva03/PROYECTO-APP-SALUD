@@ -63,6 +63,14 @@ document.getElementById('saludo').textContent = hora < 13 ? 'Buenos días' : (ho
 let ultimoEstado = '';
 let hayAlertas = false;
 let fallosSeguidos = 0;
+let sesionCaducadaMostrada = false;
+
+function manejarSesionCaducada() {
+    if (sesionCaducadaMostrada) return;
+    sesionCaducadaMostrada = true;
+    document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
+    setTimeout(() => { window.location.href = '/login'; }, 3000);
+}
 
 async function atenderAlerta(id) {
     try {
@@ -149,8 +157,7 @@ async function consultarAlertas() {
         
         // NUEVO: Riesgo 3.17 - Banner de sesión caducada
         if (respuesta.status === 401) {
-            document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
-            setTimeout(() => { window.location.href = '/login'; }, 3000);
+            manejarSesionCaducada();
             return;
         }
 
@@ -169,8 +176,6 @@ async function consultarAlertas() {
         marcarConexion(true);
         actualizarEstado(alertas.length);
         ultimaComprobacion.textContent = horaAhora();
-        const revision = document.getElementById('ultima-revision');
-        if (revision) revision.textContent = 'Última revisión: ' + horaAhora();
 
         hayAlertas = alertas.length > 0;
         actualizarBannerSOS(alertas);
@@ -202,8 +207,7 @@ async function consultarTomas() {
         
         // NUEVO: Riesgo 3.17 - Banner de sesión caducada
         if (respuesta.status === 401) {
-            document.body.insertAdjacentHTML('afterbegin', '<div style="background-color: #f44336; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; font-weight: bold; font-size: 1.2rem;">Tu sesión ha caducado. Redirigiendo al login...</div>');
-            setTimeout(() => { window.location.href = '/login'; }, 3000);
+            manejarSesionCaducada();
             return;
         }
 

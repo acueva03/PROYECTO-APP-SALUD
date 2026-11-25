@@ -1,23 +1,24 @@
 import os
 import secrets
-import threading
-import time
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, make_response
 from sqlalchemy import inspect, text, or_
 from models import (db, User, Alarm, HealthMetric, AlertSOS, MedicalProfile, RegistroToma,
                     PesoRegistro, CodigoVinculo, IntentoVinculo, IntentoLogin, VinculoLog,
-                    ahora, hoy_madrid, ZONA)
+                    ahora, hoy_madrid, a_iso_utc, ZONA)
 # NUEVO: reglas de usuario y contraseña
 from validaciones import (normalizar_username, validar_username,
-                          validar_password, username_desde_nombre)
+                          validar_password, username_desde_nombre,
+                          hora_valida, dias_a_lista)
 from ficha import validar_ficha
 from esquema import comprobar_esquema
 from config_bd import url_base_de_datos, opciones_motor, describir_url
 from vinculos import (generar_codigo, normalizar_codigo, formato_valido, hash_codigo,
                       formatear_codigo, generar_qr, MINUTOS_VALIDEZ, MAX_FALLOS,
                       VENTANA_MINUTOS, MENSAJE_CODIGO_INVALIDO)
-from supervisor_bp import supervisor_bp, paciente_supervisado_o_403
+from supervisor_bp import (supervisor_bp, paciente_supervisado_o_403,
+                           usuario_actual, paciente_o_error,
+                           MSG_SESION_CADUCADA, MSG_NO_ES_PACIENTE)
 from notificaciones_bp import notificaciones_bp
 from checkin_bp import checkin_bp
 from notificaciones import enviar_a_supervisores_de, enviar_a_usuario
@@ -115,25 +116,12 @@ def guardar_en_bd():
         print("ERROR de base de datos:", e)
         return False
 
-def hora_valida(texto):
-    try:
-        datetime.strptime(texto, '%H:%M')
-    except (ValueError, TypeError):
-        return False
-    return len(texto) == 5
-
 def fecha_valida(texto):
     try:
         datetime.strptime(texto, '%Y-%m-%d')
     except (ValueError, TypeError):
         return False
     return len(texto) == 10
-
-def dias_a_lista(texto):
-    """'0,1,4' -> [0, 1, 4]. Lunes=0 ... domingo=6 (igual que date.weekday()). Vacío -> [] (todos los días)."""
-    if not texto:
-        return []
-    return sorted({int(x) for x in texto.split(',') if x.strip().isdigit()})
 
 
 def leer_repeticion(data):
@@ -183,15 +171,19 @@ def alarma_a_dict(a):
         'fecha': a.fecha,
         'es_repetitiva': a.es_repetitiva,
         'activa': a.activa,
-        'ultima_vez_sono': (a.ultima_vez_sono.replace(tzinfo=timezone.utc).isoformat()
-                            if a.ultima_vez_sono else None),
+        'ultima_vez_sono': a_iso_utc(a.ultima_vez_sono),
         'dosis': a.dosis,
         'dias': dias_a_lista(a.dias_semana)      # [] = todos los días
     }
 
-def usuario_actual():
-    user_id = session.get('user_id')
-    return db.session.get(User, user_id) if user_id else None
+
+def _iniciar_sesion(usuario):
+    session.clear()
+    session.permanent = True            # 3.17: la sesión dura 30 días
+    session['user_id'] = usuario.id
+    session['rol'] = usuario.rol
+    session['nombre'] = usuario.nombre
+    return redirect(url_for('supervisor') if usuario.rol == 'supervisor' else url_for('inicio'))
 
 # ---------------- RUTAS DE LOGIN, REGISTRO Y LOGOUT ----------------
 # CAMBIADO: el login ahora busca por username (único), no por nombre
@@ -226,15 +218,7 @@ def login():
         if usuario and usuario.check_password(password):
             IntentoLogin.query.filter_by(username=username, ip=ip).delete()   # acierta: contador a cero
             guardar_en_bd()
-            session.clear()
-            session.permanent = True            # 3.17: la sesión dura 30 días
-            session['user_id'] = usuario.id
-            session['rol'] = usuario.rol
-            session['nombre'] = usuario.nombre
-
-            if usuario.rol == 'supervisor':
-                return redirect(url_for('supervisor'))
-            return redirect(url_for('inicio'))
+            return _iniciar_sesion(usuario)
 
         # Fallo: se anota (y se limpian los antiguos para que la tabla no crezca sin fin)
         if username:
@@ -282,12 +266,7 @@ def registro():
         return render_template('registro.html', error='No se pudo crear la cuenta. Inténtalo de nuevo.', valores=data), 500
 
     # Al registrarse entra directamente con su cuenta
-    session.clear()
-    session.permanent = True            # 3.17: la sesión dura 30 días
-    session['user_id'] = usuario.id
-    session['rol'] = usuario.rol
-    session['nombre'] = usuario.nombre
-    return redirect(url_for('supervisor') if usuario.rol == 'supervisor' else url_for('inicio'))
+    return _iniciar_sesion(usuario)
 
 @app.route('/logout')
 def logout():
@@ -298,23 +277,23 @@ def logout():
 # Rutas principales protegidas con sesión:
 @app.route('/')
 def inicio():
-    if 'user_id' not in session or session.get('rol') != 'dependiente':
+    usuario = usuario_actual()
+    if not usuario or usuario.rol != 'dependiente':
         return redirect(url_for('login'))
-    usuario = db.session.get(User, session['user_id'])
     return render_template('paciente.html', usuario=usuario)
 
 @app.route('/ficha-medica')
 def pagina_ficha_medica():
-    if 'user_id' not in session or session.get('rol') != 'dependiente':
+    usuario = usuario_actual()
+    if not usuario or usuario.rol != 'dependiente':
         return redirect(url_for('login'))
-    usuario = db.session.get(User, session['user_id'])
     return render_template('ficha_medica.html', usuario=usuario)
 
 @app.route('/supervisor')
 def supervisor():
-    if 'user_id' not in session or session.get('rol') != 'supervisor':
+    usuario = usuario_actual()
+    if not usuario or usuario.rol != 'supervisor':
         return redirect(url_for('login'))
-    usuario = db.session.get(User, session['user_id'])
        # CAMBIADO: se pasan TODOS los pacientes, por orden alfabético
     pacientes = sorted(usuario.dependientes, key=lambda p: p.nombre_completo.lower())
     return render_template('supervisor.html', usuario=usuario, pacientes=pacientes)
@@ -357,9 +336,8 @@ def crear_alarma():
 
 @app.route('/api/mis-alarmas', methods=['GET'])
 def listar_mis_alarmas():
-    user_id = session.get('user_id')
-    if not user_id: return jsonify({'error': 'No autorizado'}), 401
-    usuario = db.session.get(User, user_id)
+    usuario = usuario_actual()
+    if not usuario: return jsonify({'error': 'No autorizado'}), 401
     incluir_todas = request.args.get('todas') == '1'
     alarmas = [a for a in usuario.alarmas if not a.eliminada and (incluir_todas or a.activa)]
     alarmas.sort(key=lambda a: ((a.fecha or ''), a.hora))
@@ -367,17 +345,16 @@ def listar_mis_alarmas():
 
 @app.route('/api/sos', methods=['POST'])
 def activar_sos():
-    user_id = session.get('user_id') # NUEVO: Sacado de la sesión segura
-    if not user_id: return jsonify({'error': 'No autorizado'}), 401
-    usuario = db.session.get(User, user_id)
+    usuario = usuario_actual() # NUEVO: Sacado de la sesión segura
+    if not usuario: return jsonify({'error': 'No autorizado'}), 401
     if usuario.rol != 'dependiente':
         return jsonify({'error': 'Solo un dependiente puede emitir un SOS'}), 400
     
-    existente = AlertSOS.query.filter_by(user_id=user_id, estado='ACTIVA').first()
+    existente = AlertSOS.query.filter_by(user_id=usuario.id, estado='ACTIVA').first()
     if existente:
         return jsonify({'mensaje': 'Ya existe una alerta SOS activa', 'alerta_id': existente.id}), 200
 
-    alerta = AlertSOS(user_id=user_id)
+    alerta = AlertSOS(user_id=usuario.id)
     db.session.add(alerta)
     if not guardar_en_bd(): return jsonify({'error': 'Error interno'}), 500
     print("ALERTA SOS RECIBIDA:", alerta.id)
@@ -387,21 +364,20 @@ def activar_sos():
         'SOS',
         f"SOS: {usuario.nombre} necesita ayuda",
         "Ha pulsado el botón de emergencia SOS.",
-        datos={'tipo': 'SOS', 'alerta_id': str(alerta.id), 'paciente_id': str(usuario.id)}
+        datos={'alerta_id': str(alerta.id), 'paciente_id': str(usuario.id)}
     )
     return jsonify({'mensaje': 'Alerta SOS emitida', 'alerta_id': alerta.id}), 201
 
 @app.route('/api/mis-alertas', methods=['GET'])
 def alertas_activas():
-    supervisor_id = session.get('user_id')
-    if not supervisor_id: return jsonify({'error': 'No autorizado'}), 401
-    supervisor = db.session.get(User, supervisor_id)
+    supervisor = usuario_actual()
+    if not supervisor: return jsonify({'error': 'No autorizado'}), 401
     resultado = []
     for dep in supervisor.dependientes:
         for a in dep.alertas_sos:
             if a.estado == 'ACTIVA':
                 resultado.append({'alerta_id': a.id, 'dependiente': dep.nombre, 'dependiente_id': dep.id,
-                  'fecha_hora': a.fecha_hora.replace(tzinfo=timezone.utc).isoformat()})
+                  'fecha_hora': a_iso_utc(a.fecha_hora)})
     return jsonify(resultado)
 
 @app.route('/api/alertas/<int:alerta_id>/atender', methods=['POST'])
@@ -477,7 +453,7 @@ def eliminadas_de(user_id):
     resultado = []
     for a in alarmas:
         d = alarma_a_dict(a)
-        d['eliminada_en'] = a.eliminada_en.replace(tzinfo=timezone.utc).isoformat()
+        d['eliminada_en'] = a_iso_utc(a.eliminada_en)
         resultado.append(d)
     return resultado
 
@@ -552,7 +528,7 @@ def alarma_sonada(alarma_id):
     return jsonify({'mensaje': 'Sonada', 'registro_id': registro.id, 'alarma': alarma_a_dict(alarma)}), 200
 
 def toma_a_dict(t):
-    return {'toma_id': t.id, 'titulo': t.titulo, 'dosis': t.dosis, 'fecha_prevista': t.fecha_prevista, 'hora_prevista': t.hora_prevista, 'estado': t.estado, 'creado': t.creado.replace(tzinfo=timezone.utc).isoformat()}
+    return {'toma_id': t.id, 'titulo': t.titulo, 'dosis': t.dosis, 'fecha_prevista': t.fecha_prevista, 'hora_prevista': t.hora_prevista, 'estado': t.estado, 'creado': a_iso_utc(t.creado)}
 
 def tomas_pendientes_de(user_id, horas):
     limite = ahora() - timedelta(hours=horas)
@@ -628,9 +604,8 @@ def alarmas_sin_sonar_de(user_id, horas=24):
 
 @app.route('/api/mis-tomas-supervisadas', methods=['GET'])
 def tomas_supervisor():
-    supervisor_id = session.get('user_id')
-    if not supervisor_id: return jsonify({'error': 'No autorizado'}), 401
-    supervisor = db.session.get(User, supervisor_id)
+    supervisor = usuario_actual()
+    if not supervisor: return jsonify({'error': 'No autorizado'}), 401
     resultado = []
     for dep in supervisor.dependientes:
         for t in tomas_pendientes_de(dep.id, 24):
@@ -691,8 +666,7 @@ def tomas_de(user_id, dias):
         'titulo': t.titulo, 'dosis': t.dosis,
         'fecha_prevista': t.fecha_prevista, 'hora_prevista': t.hora_prevista,
         'estado': t.estado,
-        'confirmada_en': (t.confirmada_en.replace(tzinfo=timezone.utc).isoformat()
-                          if t.confirmada_en else None)
+        'confirmada_en': a_iso_utc(t.confirmada_en)
     } for t in tomas]
 
 @app.route('/api/mi-salud', methods=['GET'])
@@ -802,24 +776,14 @@ def pagina_salud_supervisor(paciente_id):
 # ---------------- VINCULACIÓN SUPERVISOR <-> PACIENTE (código y QR) ----------------
 # Mensajes claros: así un "Prohibido" no confunde (lo típico en pruebas es tener dos cuentas
 # abiertas en el mismo navegador: la cookie de sesión es una sola y la última en entrar gana)
-MSG_SESION_CADUCADA = 'Tu sesión ha caducado. Vuelve a iniciar sesión.'
 MSG_NO_ES_SUPERVISOR = ('Esta acción es solo para cuentas de supervisor. Si tienes varias pestañas abiertas, '
                         'es posible que hayas iniciado sesión con otra cuenta en este mismo navegador: recarga la página.')
-MSG_NO_ES_PACIENTE = ('Esta acción es solo para cuentas de paciente. Si tienes varias pestañas abiertas, '
-                      'es posible que hayas iniciado sesión con otra cuenta en este mismo navegador: recarga la página.')
 
 def supervisor_o_error():
     """Devuelve (supervisor, None) o (None, respuesta_de_error) con un mensaje que explica el motivo."""
     usuario = usuario_actual()
     if not usuario: return None, (jsonify({'error': MSG_SESION_CADUCADA}), 401)
     if usuario.rol != 'supervisor': return None, (jsonify({'error': MSG_NO_ES_SUPERVISOR}), 403)
-    return usuario, None
-
-def paciente_o_error():
-    """Devuelve (paciente, None) o (None, respuesta_de_error) con un mensaje que explica el motivo."""
-    usuario = usuario_actual()
-    if not usuario: return None, (jsonify({'error': MSG_SESION_CADUCADA}), 401)
-    if usuario.rol != 'dependiente': return None, (jsonify({'error': MSG_NO_ES_PACIENTE}), 403)
     return usuario, None
 
 def anotar_vinculo(accion, supervisor_id, paciente_id, iniciado_por):

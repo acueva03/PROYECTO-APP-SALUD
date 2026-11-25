@@ -1,7 +1,27 @@
 import re
 import unicodedata
+from datetime import datetime
 
 USERNAME_RE = re.compile(r'[a-z0-9._-]{3,30}')
+HORA_RE = re.compile(r'\d\d:\d\d')
+
+
+def hora_valida(texto):
+    """True si es 'HH:MM' real (00:00-23:59)."""
+    if not isinstance(texto, str) or not HORA_RE.fullmatch(texto):
+        return False
+    try:
+        datetime.strptime(texto, '%H:%M')
+    except ValueError:
+        return False
+    return True
+
+
+def dias_a_lista(texto):
+    """'0,1,4' -> [0, 1, 4]. Lunes=0 ... domingo=6 (igual que date.weekday()). Vacío -> [] (todos los días)."""
+    if not texto:
+        return []
+    return sorted({int(x) for x in texto.split(',') if x.strip().isdigit()})
 
 
 def normalizar_username(texto):

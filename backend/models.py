@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, date, timezone
+from datetime import datetime, timezone
 
 # Importar herramientas de seguridad para cifrar contraseñas (Riesgo 3.5)
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -17,6 +17,11 @@ ZONA = ZoneInfo('Europe/Madrid')
 def hoy_madrid():
     """Fecha de hoy en Madrid, con independencia de la zona horaria del servidor (riesgo 3.13)."""
     return datetime.now(ZONA).date()
+
+def a_iso_utc(fecha):
+    """SQLite guarda las fechas sin zona horaria (siempre en UTC).
+    Aquí se les pone 'UTC' para que el navegador las convierta bien a su hora local."""
+    return fecha.replace(tzinfo=timezone.utc).isoformat() if fecha else None
 
 # Tabla intermedia para vincular Supervisores con Dependientes
 supervisor_dependiente = db.Table(

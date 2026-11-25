@@ -9,15 +9,15 @@
 #
 # IMPORTANTE: este archivo NO importa "app" (así se evitan imports circulares).
 # Usa solo models.py, supervisor_bp.py y notificaciones.py.
-import re
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request, session
 from sqlalchemy.exc import IntegrityError
 
 from models import db, User, CheckIn, CheckinConfig, ahora, hoy_madrid, ZONA
-from supervisor_bp import paciente_supervisado_o_403, a_iso_utc
+from supervisor_bp import paciente_supervisado_o_403, a_iso_utc, paciente_o_error
 from notificaciones import enviar_a_supervisores_de, ya_avisado, marcar_avisado
+from validaciones import hora_valida
 
 checkin_bp = Blueprint('checkin_bp', __name__)
 
@@ -34,13 +34,6 @@ DIAS_HISTORIAL = 14                   # días que ve el supervisor
 # así que si añades o quitas una aquí, la pantalla se actualiza sola.
 ESTADOS_ANIMO = ['Contento', 'Tranquilo', 'Cansado', 'Triste', 'Ansioso']
 
-MSG_SESION_CADUCADA = 'Tu sesión ha caducado. Vuelve a iniciar sesión.'
-MSG_NO_ES_PACIENTE = ('Esta acción es solo para cuentas de paciente. Si tienes varias pestañas abiertas, '
-                      'es posible que hayas iniciado sesión con otra cuenta en este mismo navegador: recarga la página.')
-
-# Formato estricto HH:MM (dos dígitos). Evita cosas como "9:00" o "09:00:00".
-HORA_RE = re.compile(r'\d\d:\d\d')
-
 
 # ---------------------------------------------------------------------------
 # Utilidades pequeñas
@@ -49,28 +42,6 @@ def hora_madrid():
     """Hora actual en Madrid como 'HH:MM'. Va en una función aparte para poder
     sustituirla en los tests. Siempre la hora del SERVIDOR, nunca la del móvil (riesgo 3.13)."""
     return datetime.now(ZONA).strftime('%H:%M')
-
-
-def hora_valida(texto):
-    """True si es 'HH:MM' real (00:00-23:59)."""
-    if not isinstance(texto, str) or not HORA_RE.fullmatch(texto):
-        return False
-    try:
-        datetime.strptime(texto, '%H:%M')
-    except ValueError:
-        return False
-    return True
-
-
-def paciente_o_error():
-    """Devuelve (paciente, None) o (None, respuesta_de_error). Mismo estilo que app.py."""
-    user_id = session.get('user_id')
-    usuario = db.session.get(User, user_id) if user_id else None
-    if not usuario:
-        return None, (jsonify({'error': MSG_SESION_CADUCADA}), 401)
-    if usuario.rol != 'dependiente':
-        return None, (jsonify({'error': MSG_NO_ES_PACIENTE}), 403)
-    return usuario, None
 
 
 def config_de(user_id):

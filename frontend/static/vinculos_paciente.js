@@ -81,7 +81,7 @@
         const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {
             const r = await fetch('/api/vinculos/supervisores', { signal: controller.signal });
-            const datos = await r.json();
+            const datos = await r.json().catch(() => ({}));
             if (!r.ok) {
                 if (!silencioso) mostrarMensajeSup(datos.error || 'No se pudo cargar la lista', true);
                 return;
@@ -116,7 +116,7 @@
         const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {
             const r = await fetch('/api/vinculos/supervisores/' + supervisor.id, { method: 'DELETE', signal: controller.signal });
-            const datos = await r.json();
+            const datos = await r.json().catch(() => ({}));
             if (!r.ok) {
                 mostrarMensajeSup(datos.error || 'No se pudo quitar al supervisor', true);
                 boton.disabled = false;
@@ -143,7 +143,7 @@
         const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {
             const r = await fetch('/api/vinculos/codigo', { method: 'POST', signal: controller.signal });
-            const datos = await r.json();
+            const datos = await r.json().catch(() => ({}));
             if (!r.ok) {
                 ocultarCodigo();
                 mostrarMensaje(datos.error || 'No se pudo generar el código', true);

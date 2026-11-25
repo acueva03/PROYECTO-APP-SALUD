@@ -33,6 +33,9 @@ def registrar_dispositivo():
 
     if not token or not isinstance(token, str) or not token.strip() or len(token) > 255:
         return jsonify({'error': 'Token inválido'}), 400
+    if not isinstance(plataforma, str) or not plataforma.strip() or len(plataforma.strip()) > 20:
+        return jsonify({'error': 'Plataforma inválida'}), 400
+    plataforma = plataforma.strip()
 
     token = token.strip()
     disp = DispositivoPush.query.filter_by(token=token).first()
@@ -69,9 +72,11 @@ def desregistrar_dispositivo():
 
     datos = request.get_json(silent=True) or {}
     token = datos.get('token')
+    if token is not None and not isinstance(token, str):
+        return jsonify({'error': 'Token inválido'}), 400
 
     try:
-        if token:
+        if token and token.strip():
             disp = DispositivoPush.query.filter_by(token=token.strip()).first()
             if disp:
                 db.session.delete(disp)
@@ -116,7 +121,7 @@ def procesar_tomas_sin_confirmar():
                         tipo='TOMA_SIN_CONFIRMAR',
                         titulo=f"Toma sin confirmar: {dep.nombre}",
                         cuerpo=f"La toma '{toma.titulo}' lleva más de 15 minutos sin confirmar.",
-                        datos={'tipo': 'TOMA_SIN_CONFIRMAR', 'toma_id': str(toma.id), 'paciente_id': str(dep.id)}
+                        datos={'toma_id': str(toma.id), 'paciente_id': str(dep.id)}
                     )
                     marcar_avisado('TOMA_SIN_CONFIRMAR', clave, user_id=dep.id)
                     avisos_enviados += 1
@@ -131,7 +136,7 @@ def procesar_tomas_sin_confirmar():
                     tipo='ALARMA_NO_SONO',
                     titulo=f"Alarma no sonada: {dep.nombre}",
                     cuerpo=f"La alarma '{alarma.titulo}' no ha sonado en el móvil de {dep.nombre}.",
-                    datos={'tipo': 'ALARMA_NO_SONO', 'alarma_id': str(alarma.id), 'paciente_id': str(dep.id)}
+                    datos={'alarma_id': str(alarma.id), 'paciente_id': str(dep.id)}
                 )
                 marcar_avisado('ALARMA_NO_SONO', clave, user_id=dep.id)
                 avisos_enviados += 1
