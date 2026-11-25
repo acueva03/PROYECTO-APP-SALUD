@@ -42,8 +42,8 @@ Marca cada punto; si alguno falla, no se entrega.
 ## 6. PWA instalable y modo sin conexión (2.6)
 
 - [ ] **Detección del Service Worker:** En DevTools (`F12` > *Application* > *Service Workers*), `/sw.js` aparece activo y en ejecución (`activated and is running`) con ámbito `/`.
-- [ ] **Manifiesto Web:** En DevTools (*Application* > *Manifest*), reconoce el nombre «App Salud», `start_url: /`, visualización `standalone`, `theme-color: #0F2C59` y la galería de iconos (incluyendo el icono adaptable *maskable*).
-- [ ] **Instalación como App:** Aparece el botón «Instalar App Salud» en la barra de URL o en el menú del navegador. Al instalarse, se abre en ventana independiente sin interfaz de navegador (*standalone*).
+- [ ] **Manifiesto Web:** En DevTools (*Application* > *Manifest*), reconoce el nombre «SaludOS», `start_url: /`, visualización `standalone`, `theme-color: #0F2C59` y la galería de iconos (incluyendo el icono adaptable *maskable*).
+- [ ] **Instalación como App:** Aparece el botón «Instalar SaludOS» en la barra de URL o en el menú del navegador. Al instalarse, se abre en ventana independiente sin interfaz de navegador (*standalone*).
 - [ ] **Comprobación en móvil (Android / iOS):**
   - En Android (Chrome): opción «Instalar aplicación» / «Añadir a pantalla de inicio» con su icono y nombre propios.
   - En iOS (Safari): botón «Compartir» > «Añadir a pantalla de inicio», abre en pantalla completa.

@@ -1,6 +1,6 @@
 {
-  "name": "App Salud",
-  "short_name": "App Salud",
+  "name": "SaludOS",
+  "short_name": "SOS",
   "description": "Aplicación de salud y supervisión para pacientes y cuidadores",
   "start_url": "/",
   "scope": "/",

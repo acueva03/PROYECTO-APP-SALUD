@@ -1,12 +1,12 @@
 /* ==========================================================================
-   SERVICE WORKER - APP SALUD PWA
+   SERVICE WORKER - SALUDOS PWA
    Estrategia de caché segura para salud:
    1. Nunca cachear /api/* ni llamadas no-GET (salud, SOS, sesión siempre en vivo).
    2. Navegación (HTML): Red primero (Network-First); si falla, página /offline.
    3. Estáticos (/static/*): Caché primero (Cache-First) con fallback a red.
    ========================================================================== */
 
-const CACHE_VERSION = 'app-salud-v1';
+const CACHE_VERSION = 'saludos-v1';
 const OFFLINE_URL = '/offline';
 
 const RECURSOS_ESTATICOS = [

@@ -1,4 +1,4 @@
-# PROYECTO APP SALUD
+# PROYECTO SALUDOS
 
 ## 1. Descripción General del Proyecto
 

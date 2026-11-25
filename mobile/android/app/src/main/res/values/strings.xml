@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">App Salud</string>
-    <string name="title_activity_main">App Salud</string>
+    <string name="app_name">SaludOS</string>
+    <string name="title_activity_main">SaludOS</string>
     <string name="package_name">com.is1.appsalud</string>
     <string name="custom_url_scheme">com.is1.appsalud</string>
 </resources>

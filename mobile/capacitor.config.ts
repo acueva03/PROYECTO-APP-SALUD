@@ -6,7 +6,7 @@ const url = process.env.CAP_SERVER_URL || 'http://10.0.2.2:5000';
 
 const config: CapacitorConfig = {
   appId: 'com.is1.appsalud',
-  appName: 'App Salud',
+  appName: 'SaludOS',
   webDir: 'www',
   server: {
     url,

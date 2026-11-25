@@ -6,7 +6,8 @@
 // Las preferencias se guardan en este móvil (localStorage); no se envían al servidor.
 // Uso desde otros archivos: window.AppAccesibilidad.leer(texto) y .anunciar(texto, urgente)
 (() => {
-    const CLAVE = 'app-salud-accesibilidad';          // sos.js lee la misma clave para la voz
+    const CLAVE = 'saludos-accesibilidad';            // sos.js lee la misma clave para la voz
+    const CLAVE_ANTERIOR = 'app-salud-accesibilidad';
     const POR_DEFECTO = { letra: 'normal', contraste: false, voz: true, sinAnimaciones: false };
     const raiz = document.documentElement;
     const hayVoz = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
@@ -14,7 +15,8 @@
     // ---------- Preferencias ----------
     function cargar() {
         try {
-            return { ...POR_DEFECTO, ...JSON.parse(localStorage.getItem(CLAVE) || '{}') };
+            const guardado = localStorage.getItem(CLAVE) || localStorage.getItem(CLAVE_ANTERIOR) || '{}';
+            return { ...POR_DEFECTO, ...JSON.parse(guardado) };
         } catch (error) {
             console.error('Accesibilidad: preferencias guardadas ilegibles, se usan las de serie', error);
             return { ...POR_DEFECTO };

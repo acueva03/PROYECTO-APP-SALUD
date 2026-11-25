@@ -13,7 +13,10 @@
     // Lee la preferencia directamente de localStorage para no depender de accesibilidad.js.
     function leerEnVozAlta(texto) {
         try {
-            const ajustes = JSON.parse(localStorage.getItem('app-salud-accesibilidad') || '{}');
+            const guardado = localStorage.getItem('saludos-accesibilidad')
+                || localStorage.getItem('app-salud-accesibilidad')
+                || '{}';
+            const ajustes = JSON.parse(guardado);
             if (ajustes.voz === false || !('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
             const frase = new SpeechSynthesisUtterance(texto);
