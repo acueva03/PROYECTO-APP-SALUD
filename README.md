@@ -1,4 +1,4 @@
-# PROYECTO SALUDOS
+# PROYECTO SaludOS
 
 ## 1. Descripción General del Proyecto
 
