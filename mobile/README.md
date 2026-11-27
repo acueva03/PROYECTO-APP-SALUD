@@ -34,3 +34,24 @@ npm install
 
 ## Diferencias con el navegador
 (se rellena a medida que se detecten)
+
+## Enlaces desde un QR
+
+La app registra el enlace `saludos://vincular?c=CODIGO` y, al recibirlo, abre la pantalla
+de vinculación dentro del WebView. Para App Links HTTPS reales, define `CAP_APP_LINK_HOST`
+al compilar y `ANDROID_SHA256_CERT_FINGERPRINT` en el servidor; Flask publica entonces
+`/.well-known/assetlinks.json` con la huella del certificado de firma. Esa huella no se guarda en Git.
+
+## Firma y entrega
+
+`keystore.properties`, `*.jks` y `*.keystore` son secretos y están excluidos del repositorio.
+Con el keystore del equipo preparado:
+
+```powershell
+cd mobile/android
+.\gradlew.bat assembleRelease
+```
+
+El APK se genera en `mobile/android/app/build/outputs/apk/release/`. Antes de entregar,
+instálalo en dos modelos Android distintos y completa la sección «App móvil» de
+`doc/PRUEBAS_MANUALES.md`.

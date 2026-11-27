@@ -949,6 +949,21 @@ def comprobar_salud():
         return jsonify({'ok': False}), 503
     return jsonify({'ok': True}), 200
 
+@app.route('/.well-known/assetlinks.json', methods=['GET'])
+def assetlinks_android():
+    """Relación para Android App Links; la huella se configura fuera del repositorio."""
+    huellas = [h.strip() for h in os.environ.get('ANDROID_SHA256_CERT_FINGERPRINT', '').split(',') if h.strip()]
+    if not huellas:
+        return jsonify([])
+    return jsonify([{
+        'relation': ['delegate_permission/common.handle_all_urls'],
+        'target': {
+            'namespace': 'android_app',
+            'package_name': 'com.is1.appsalud',
+            'sha256_cert_fingerprints': huellas
+        }
+    }])
+
 @app.route('/sw.js')
 def service_worker():
     """PWA: Sirve el Service Worker desde la raíz con los encabezados requeridos."""

@@ -69,11 +69,39 @@
         }
     }
 
+    async function escanearConCapacitor() {
+        const plugins = window.Capacitor && window.Capacitor.Plugins;
+        const scanner = plugins && plugins.BarcodeScanner;
+        if (!scanner || !scanner.scan) return false;
+        try {
+            if (scanner.requestPermissions) {
+                const permisos = await scanner.requestPermissions();
+                if (permisos.camera && permisos.camera !== 'granted') {
+                    mostrar('Necesitas conceder permiso de cámara para escanear el QR.', false);
+                    return true;
+                }
+            }
+            const resultado = await scanner.scan({ formats: ['QR_CODE'] });
+            const codigo = resultado.barcodes && resultado.barcodes[0] && resultado.barcodes[0].rawValue;
+            if (!codigo) {
+                mostrar('No se detectó ningún código QR.', false);
+                return true;
+            }
+            input.value = extraerCodigo(codigo);
+            canjear();
+            return true;
+        } catch (e) {
+            mostrar('No se pudo abrir el lector nativo. Puedes escribir el código manualmente.', false);
+            return true;
+        }
+    }
+
     btnEscanear.addEventListener('click', async () => {
         if (lector) {
             await detenerLector();
             return;
         }
+        if (await escanearConCapacitor()) return;
         if (typeof Html5Qrcode === 'undefined') {
             mostrar('No se pudo cargar el lector de QR. Escribe el código a mano.', false);
             return;

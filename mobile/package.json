@@ -12,11 +12,18 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor-mlkit/barcode-scanning": "^8.2.2",
     "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/camera": "^8.2.6",
-    "@capacitor/core": "^8.6.2"
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4"
   },
   "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
     "@capacitor/cli": "^8.6.2",
     "typescript": "^7.0.2"
   }

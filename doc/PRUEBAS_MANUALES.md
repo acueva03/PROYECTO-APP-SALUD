@@ -59,3 +59,14 @@ Marca cada punto; si alguno falla, no se entrega.
 - [x] Consola del navegador (F12) sin errores en rojo durante el uso normal (incluidos registros de `pwa.js` y `sw.js`).
 - [x] `npx eslint frontend/static` sin errores (sin bloques `catch` vacíos, regla 3.18.2).
 - [x] Todos los tests de `backend` en verde (incluido `test_pwa.py`), sin tocar la base de datos real.
+
+## 8. App móvil Android (P3)
+
+- [ ] Con el servidor accesible desde el móvil, instalar el APK y comprobar registro, login y cierre de sesión.
+- [ ] En dos móviles Android, crear un paciente y un supervisor y comprobar que el QR vincula ambas cuentas.
+- [ ] Denegar y volver a conceder el permiso de cámara: el mensaje debe ser claro y el código manual debe seguir funcionando.
+- [ ] Pulsar atrás dentro de la app: navega por el historial; desde la pantalla inicial minimiza la app.
+- [ ] En la pantalla del paciente, bloquear el móvil y comprobar que la pantalla permanece activa mientras está abierta.
+- [ ] Activar modo avión: aparece `/offline`, el botón SOS muestra el plan alternativo para llamar al 112.
+- [ ] Abrir `saludos://vincular?c=...` desde Android y comprobar que la app entra en la pantalla de vinculación.
+- [ ] Compilar `assembleDebug` y `assembleRelease`; no debe aparecer ningún secreto en Git.

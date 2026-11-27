@@ -1,7 +1,16 @@
 apply plugin: 'com.android.application'
 
+// Firma de release: lee las claves de keystore.properties (NO se sube al repositorio)
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.is1.appsalud"
+    // Para App Links: CAP_APP_LINK_HOST debe ser el dominio HTTPS de P1 al compilar.
+    manifestPlaceholders = [appLinkHost: System.getenv('CAP_APP_LINK_HOST') ?: 'invalid.saludos.local']
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "com.is1.appsalud"
@@ -16,10 +25,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    if (keystorePropertiesFile.exists()) {
+        signingConfigs {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
