@@ -268,5 +268,103 @@ class TestTickEIdempotencia(BaseTest):
         self.assertEqual(mock_envio.call_count, 1)
 
 
+class TestPreferenciasNotificacion(BaseTest):
+
+    def setUp(self):
+        super().setUp()
+        os.environ['TESTING'] = '1'
+
+    def tearDown(self):
+        os.environ.pop('TESTING', None)
+        super().tearDown()
+
+    def test_obtener_preferencias_sin_sesion_da_401(self):
+        resp = self.cliente.get('/api/mis-preferencias-notificacion')
+        self.assertEqual(resp.status_code, 401)
+
+    def test_obtener_preferencias_por_defecto_todo_true(self):
+        self.login('alberto')
+        resp = self.cliente.get('/api/mis-preferencias-notificacion')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data.get('SOS'))
+        self.assertTrue(data.get('TOMA_SIN_CONFIRMAR'))
+        self.assertTrue(data.get('ALARMA_NO_SONO'))
+        self.assertTrue(data.get('CHECKIN_PERDIDO'))
+
+    def test_actualizar_preferencias_sin_sesion_da_401(self):
+        resp = self.cliente.put('/api/mis-preferencias-notificacion', json={'TOMA_SIN_CONFIRMAR': False})
+        self.assertEqual(resp.status_code, 401)
+
+    def test_actualizar_preferencias_cuerpo_invalido_da_400(self):
+        self.login('alberto')
+        resp = self.cliente.put('/api/mis-preferencias-notificacion', data='no-json', content_type='text/plain')
+        self.assertEqual(resp.status_code, 400)
+
+        resp2 = self.cliente.put('/api/mis-preferencias-notificacion', json={'TOMA_SIN_CONFIRMAR': 'no-booleano'})
+        self.assertEqual(resp2.status_code, 400)
+
+    def test_actualizar_preferencias_exitoso(self):
+        self.login('alberto')
+        resp = self.cliente.put('/api/mis-preferencias-notificacion', json={
+            'TOMA_SIN_CONFIRMAR': False,
+            'CHECKIN_PERDIDO': False
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertFalse(data.get('TOMA_SIN_CONFIRMAR'))
+        self.assertFalse(data.get('CHECKIN_PERDIDO'))
+        self.assertTrue(data.get('SOS'))
+        self.assertTrue(data.get('ALARMA_NO_SONO'))
+
+    def test_actualizar_preferencias_sos_no_se_desactiva_nunca(self):
+        self.login('alberto')
+        # Intentar desactivar SOS debe ignorarse por regla de seguridad
+        resp = self.cliente.put('/api/mis-preferencias-notificacion', json={'SOS': False})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data.get('SOS'))
+
+    def test_envio_respeta_preferencias_desactivadas(self):
+        # Alberto tiene un dispositivo
+        disp = DispositivoPush(user_id=self.alberto.id, token='tok-alb-pref', plataforma='android')
+        db.session.add(disp)
+        db.session.commit()
+
+        # Alberto desactiva TOMA_SIN_CONFIRMAR
+        self.login('alberto')
+        self.cliente.put('/api/mis-preferencias-notificacion', json={'TOMA_SIN_CONFIRMAR': False})
+
+        # Al enviar TOMA_SIN_CONFIRMAR, no debe enviarle a Alberto
+        total = enviar_a_supervisores_de(self.maria.id, 'TOMA_SIN_CONFIRMAR', 'Titulo', 'Cuerpo', en_segundo_plano=False)
+        self.assertEqual(total, 0)
+
+        # Pero SOS SI debe enviarse siempre
+        total_sos = enviar_a_supervisores_de(self.maria.id, 'SOS', 'Titulo SOS', 'Cuerpo SOS', en_segundo_plano=False)
+        self.assertEqual(total_sos, 1)
+
+    def test_envio_con_dos_supervisores_respeta_preferencias_individuales(self):
+        # Crear segundo supervisor (Carlos) vinculado a María
+        carlos = User(nombre='Carlos', username='carlos', rol='supervisor')
+        carlos.set_password('1234')
+        carlos.dependientes.append(self.maria)
+        db.session.add(carlos)
+        db.session.commit()
+
+        disp1 = DispositivoPush(user_id=self.alberto.id, token='tok-alb-ind', plataforma='android')
+        disp2 = DispositivoPush(user_id=carlos.id, token='tok-carlos-ind', plataforma='android')
+        db.session.add_all([disp1, disp2])
+        db.session.commit()
+
+        # Alberto desactiva CHECKIN_PERDIDO, pero Carlos lo mantiene activo
+        self.login('alberto')
+        self.cliente.put('/api/mis-preferencias-notificacion', json={'CHECKIN_PERDIDO': False})
+
+        # Envío de CHECKIN_PERDIDO: solo debe llegar al dispositivo de Carlos (1 envío)
+        total = enviar_a_supervisores_de(self.maria.id, 'CHECKIN_PERDIDO', 'Titulo', 'Cuerpo', en_segundo_plano=False)
+        self.assertEqual(total, 1)
+
+
 if __name__ == '__main__':
     unittest.main()
+

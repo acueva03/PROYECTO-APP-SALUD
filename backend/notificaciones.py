@@ -55,8 +55,24 @@ def inicializar_firebase():
 
 
 # ---------------------------------------------------------------------------
-# Helpers de Idempotencia (contrato para P4 y P5)
+# Helpers de Idempotencia y Preferencias (contrato para P4 y P5)
 # ---------------------------------------------------------------------------
+def usuario_desea_notificacion(user_id, tipo):
+    """Comprueba si el usuario tiene habilitada la notificación para el tipo dado.
+    Por seguridad (regla del sprint), el tipo 'SOS' siempre devuelve True."""
+    if tipo == 'SOS':
+        return True
+    try:
+        from models import PreferenciaNotificacion
+        pref = PreferenciaNotificacion.query.filter_by(user_id=user_id, tipo=tipo).first()
+        if pref is None:
+            return True  # Por defecto todas las alertas están activas
+        return bool(pref.activa)
+    except Exception as e:
+        logger.warning(f"Error al consultar preferencias para user_id={user_id}, tipo={tipo}: {e}")
+        return True
+
+
 def ya_avisado(tipo, clave):
     """Comprueba si ya se ha enviado un aviso para el tipo y clave dados."""
     return AvisoEnviado.query.filter_by(tipo=tipo, clave=clave).first() is not None
@@ -179,6 +195,10 @@ def enviar_a_usuario(user_id, tipo, titulo, cuerpo, datos=None, en_segundo_plano
     Devuelve la cantidad de dispositivos destino y nunca lanza excepciones.
     """
     try:
+        if not usuario_desea_notificacion(user_id, tipo):
+            logger.info(f"Usuario {user_id} tiene desactivadas las notificaciones de tipo '{tipo}'. Envío omitido.")
+            return 0
+
         dispositivos = DispositivoPush.query.filter_by(user_id=user_id).all()
         if not dispositivos:
             return 0
@@ -200,7 +220,10 @@ def enviar_a_supervisores_de(paciente_id, tipo, titulo, cuerpo, datos=None, en_s
         if not paciente or not paciente.supervisores:
             return 0
 
-        sup_ids = [s.id for s in paciente.supervisores]
+        sup_ids = [s.id for s in paciente.supervisores if usuario_desea_notificacion(s.id, tipo)]
+        if not sup_ids:
+            return 0
+
         dispositivos = DispositivoPush.query.filter(DispositivoPush.user_id.in_(sup_ids)).all()
         if not dispositivos:
             return 0

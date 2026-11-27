@@ -117,6 +117,49 @@
         <ul id="lista-tomas" class="lista-tomas"></ul>
     </section>
 
+    <!-- PREFERENCIAS DE NOTIFICACIÓN PUSH (P4 - Andrés) -->
+    <section class="tarjeta" id="seccion-preferencias-notificacion" aria-labelledby="titulo-preferencias">
+        <div class="tarjeta-cabecera">
+            <h2 id="titulo-preferencias">🔔 Preferencias de notificaciones</h2>
+        </div>
+        <p class="texto-suave">Configura qué avisos deseas recibir en tus dispositivos. La alerta SOS está siempre activa por seguridad.</p>
+        
+        <form id="form-preferencias-notificacion" class="lista-preferencias" aria-label="Preferencias de notificaciones">
+            <div class="item-preferencia">
+                <label class="switch-etiqueta" for="pref-sos">
+                    <strong>Alerta de emergencia (SOS)</strong>
+                    <span class="texto-suave">Aviso inmediato si un paciente pulsa el botón SOS (Obligatorio)</span>
+                </label>
+                <input type="checkbox" id="pref-sos" checked disabled aria-disabled="true" title="No se puede desactivar por seguridad">
+            </div>
+
+            <div class="item-preferencia">
+                <label class="switch-etiqueta" for="pref-tomas">
+                    <strong>Tomas de medicación sin confirmar</strong>
+                    <span class="texto-suave">Aviso tras 15 minutos sin confirmación de la toma</span>
+                </label>
+                <input type="checkbox" id="pref-tomas" class="switch-input" data-tipo="TOMA_SIN_CONFIRMAR">
+            </div>
+
+            <div class="item-preferencia">
+                <label class="switch-etiqueta" for="pref-alarmas">
+                    <strong>Alarmas no sonadas en el móvil</strong>
+                    <span class="texto-suave">Aviso si una alarma programada no sonó en el dispositivo</span>
+                </label>
+                <input type="checkbox" id="pref-alarmas" class="switch-input" data-tipo="ALARMA_NO_SONO">
+            </div>
+
+            <div class="item-preferencia">
+                <label class="switch-etiqueta" for="pref-checkin">
+                    <strong>Check-in diario «Estoy bien» no realizado</strong>
+                    <span class="texto-suave">Aviso si el paciente no confirma su estado antes de la hora límite</span>
+                </label>
+                <input type="checkbox" id="pref-checkin" class="switch-input" data-tipo="CHECKIN_PERDIDO">
+            </div>
+        </form>
+        <p id="msg-preferencias" class="mensaje-exito" role="status" aria-live="polite" hidden>Preferencias actualizadas correctamente.</p>
+    </section>
+
     <!-- AVISO INFORMATIVO -->
     <section class="aviso">
         <span class="aviso-icono">i</span>
@@ -192,4 +235,6 @@
 <script src="{{ url_for('static', filename='supervisor.js') }}"></script>
 <!-- NUEVO (parte 3): va DESPUÉS de supervisor.js porque usa su función atenderAlerta -->
 <script src="{{ url_for('static', filename='supervisor_pacientes.js') }}"></script>
+<!-- P4 (Andrés): Gestión de preferencias de notificación -->
+<script src="{{ url_for('static', filename='preferencias_notificaciones.js') }}"></script>
 {% endblock %}

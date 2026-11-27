@@ -237,3 +237,16 @@ class CheckinConfig(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     hora_limite = db.Column(db.String(5), nullable=False, default='11:00')    # 'HH:MM'
     activo = db.Column(db.Boolean, nullable=False, default=True)
+
+# Preferencias de recepción de notificaciones del usuario (P4 - Andrés)
+# Por defecto todas las alertas están activas. La alerta de SOS nunca se desactiva.
+class PreferenciaNotificacion(db.Model):
+    __tablename__ = 'preferencias_notificacion'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    tipo = db.Column(db.String(50), nullable=False)
+    activa = db.Column(db.Boolean, nullable=False, default=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'tipo', name='uq_preferencia_user_tipo'),
+    )

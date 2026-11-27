@@ -5,11 +5,12 @@ import os
 from datetime import timedelta, timezone
 from flask import Blueprint, request, jsonify, session
 
-from models import db, User, DispositivoPush, ahora
+from models import db, User, DispositivoPush, PreferenciaNotificacion, ahora
 from notificaciones import (
     enviar_a_supervisores_de,
     ya_avisado,
     marcar_avisado,
+    TIPOS_AVISO
 )
 
 notificaciones_bp = Blueprint('notificaciones_bp', __name__)
@@ -89,6 +90,70 @@ def desregistrar_dispositivo():
         return jsonify({'error': 'Error interno al eliminar el dispositivo'}), 500
 
     return jsonify({'mensaje': 'Dispositivo desregistrado'}), 200
+
+
+# ---------------------------------------------------------------------------
+# Endpoints de Preferencias de Notificación (P4 - Andrés)
+# ---------------------------------------------------------------------------
+@notificaciones_bp.route('/api/mis-preferencias-notificacion', methods=['GET'])
+def obtener_mis_preferencias():
+    """Devuelve las preferencias de notificación del usuario actual.
+    Por defecto todas las notificaciones están activadas. SOS no se puede desactivar."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado'}), 401
+
+    # Por defecto todo en True
+    preferencias = {t: True for t in TIPOS_AVISO}
+
+    registros = PreferenciaNotificacion.query.filter_by(user_id=user_id).all()
+    for reg in registros:
+        if reg.tipo in preferencias:
+            preferencias[reg.tipo] = bool(reg.activa)
+
+    # Por seguridad, SOS SIEMPRE permanece en True
+    preferencias['SOS'] = True
+
+    return jsonify(preferencias), 200
+
+
+@notificaciones_bp.route('/api/mis-preferencias-notificacion', methods=['PUT'])
+def actualizar_mis_preferencias():
+    """Actualiza las preferencias de notificación del usuario.
+    El SOS no se puede desactivar (seguridad). Si se envía false para SOS, se ignora."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado'}), 401
+
+    datos = request.get_json(silent=True)
+    if not isinstance(datos, dict):
+        return jsonify({'error': 'Cuerpo JSON inválido'}), 400
+
+    for tipo, valor in datos.items():
+        if tipo not in TIPOS_AVISO:
+            continue
+        if tipo == 'SOS':
+            # SOS nunca se desactiva
+            continue
+        if not isinstance(valor, bool):
+            return jsonify({'error': f'El valor para {tipo} debe ser booleano'}), 400
+
+        pref = PreferenciaNotificacion.query.filter_by(user_id=user_id, tipo=tipo).first()
+        if pref:
+            pref.activa = valor
+        else:
+            pref = PreferenciaNotificacion(user_id=user_id, tipo=tipo, activa=valor)
+            db.session.add(pref)
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Error interno al guardar preferencias'}), 500
+
+    # Devolver el estado actualizado
+    return obtener_mis_preferencias()
+
 
 
 # ---------------------------------------------------------------------------
