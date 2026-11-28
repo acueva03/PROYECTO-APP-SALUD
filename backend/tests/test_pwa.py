@@ -1,9 +1,11 @@
 import json
 import os
+import re
+import tempfile
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'   # PRIMERO: fija DATABASE_URL en memoria antes de importar app
 
 from base_tests import BaseTest
-from app import app
+from app import app, _version_cache_estaticos
 
 
 class TestPWA(BaseTest):
@@ -47,7 +49,24 @@ class TestPWA(BaseTest):
         cuerpo = respuesta.get_data(as_text=True)
         self.assertIn('/api/', cuerpo)
         self.assertIn('CACHE_VERSION', cuerpo)
+        self.assertRegex(cuerpo, r"const\s+CACHE_VERSION\s*=\s*'saludos-[0-9a-f]{12}';")
         self.assertIn('/offline', cuerpo)
+
+    def test_cache_version_cambia_si_cambia_un_estatico(self):
+        """El hash de CACHE_VERSION debe ser determinista y cambiar al modificarse un archivo estático."""
+        with tempfile.TemporaryDirectory() as tmp:
+            archivo = os.path.join(tmp, 'app.css')
+            with open(archivo, 'w', encoding='utf-8') as f:
+                f.write('body { color: black; }')
+            v1 = _version_cache_estaticos(tmp)
+            v1_rep = _version_cache_estaticos(tmp)
+            self.assertEqual(v1, v1_rep)
+            self.assertTrue(re.fullmatch(r'saludos-[0-9a-f]{12}', v1))
+
+            with open(archivo, 'w', encoding='utf-8') as f:
+                f.write('body { color: red; }')
+            v2 = _version_cache_estaticos(tmp)
+            self.assertNotEqual(v1, v2)
 
     def test_pagina_offline_disponible(self):
         """GET /offline devuelve 200, aviso accesible y botón SOS telefónico al 112."""

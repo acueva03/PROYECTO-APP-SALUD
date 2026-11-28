@@ -1,4 +1,6 @@
+import hashlib
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, make_response
@@ -964,11 +966,38 @@ def assetlinks_android():
         }
     }])
 
+def _version_cache_estaticos(carpeta_static):
+    """Calcula un hash corto determinista de los archivos estáticos para versionar la caché del SW."""
+    h = hashlib.sha256()
+    for raiz, dirs, archivos in os.walk(carpeta_static):
+        dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
+        for nombre in sorted(archivos):
+            if nombre.startswith('.'):
+                continue
+            ruta = os.path.join(raiz, nombre)
+            rel = os.path.relpath(ruta, carpeta_static).replace(os.sep, '/')
+            h.update(rel.encode('utf-8'))
+            with open(ruta, 'rb') as f:
+                for trozo in iter(lambda: f.read(8192), b''):
+                    h.update(trozo)
+    return f'saludos-{h.hexdigest()[:12]}'
+
+
 @app.route('/sw.js')
 def service_worker():
-    """PWA: Sirve el Service Worker desde la raíz con los encabezados requeridos."""
-    response = make_response(send_from_directory(app.static_folder, 'sw.js'))
-    response.headers['Content-Type'] = 'application/javascript'
+    """PWA: Sirve el Service Worker desde la raíz con los encabezados requeridos y versión automática."""
+    ruta_sw = os.path.join(app.static_folder, 'sw.js')
+    with open(ruta_sw, 'r', encoding='utf-8') as f:
+        contenido = f.read()
+    version = _version_cache_estaticos(app.static_folder)
+    contenido = re.sub(
+        r"const\s+CACHE_VERSION\s*=\s*'[^']*';",
+        f"const CACHE_VERSION = '{version}';",
+        contenido,
+        count=1,
+    )
+    response = make_response(contenido)
+    response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
     response.headers['Service-Worker-Allowed'] = '/'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
