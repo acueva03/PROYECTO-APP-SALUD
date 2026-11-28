@@ -9,11 +9,11 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.is1.appsalud"
-    // Para App Links: CAP_APP_LINK_HOST debe ser el dominio HTTPS de P1 al compilar.
-    manifestPlaceholders = [appLinkHost: System.getenv('CAP_APP_LINK_HOST') ?: 'invalid.saludos.local']
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "com.is1.appsalud"
+        // Para App Links: CAP_APP_LINK_HOST debe ser el dominio HTTPS de P1 al compilar.
+        manifestPlaceholders = [appLinkHost: System.getenv('CAP_APP_LINK_HOST') ?: 'invalid.saludos.local']
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
