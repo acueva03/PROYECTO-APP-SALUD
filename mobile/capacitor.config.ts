@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// URL del servidor Flask. Por defecto, el PC visto desde el emulador de Android.
-// Para un móvil real o la URL de producción: $env:CAP_SERVER_URL="https://..." antes de "npx cap sync".
-const url = process.env.CAP_SERVER_URL || 'http://10.0.2.2:5000';
+// URL del servidor Flask. Por defecto, el servidor de producción en Render.
+// Para desarrollo local (emulador o móvil por USB): define CAP_SERVER_URL="http://10.0.2.2:5000" antes de "npm run sync".
+const url = process.env.CAP_SERVER_URL || 'https://app-salud.onrender.com';
 
 const config: CapacitorConfig = {
   appId: 'com.is1.appsalud',
