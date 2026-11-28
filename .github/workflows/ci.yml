@@ -29,3 +29,23 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npx eslint frontend/static
+
+  # Despliegue automático en Render: solo al subir a main y solo si los tests y ESLint pasan.
+  # Necesita el secreto RENDER_DEPLOY_HOOK (GitHub: Settings > Secrets and variables > Actions),
+  # que es la "Deploy Hook URL" de Render (servicio app-salud > Settings). Si falta, no falla: solo avisa.
+  deploy:
+    needs: [tests-python, eslint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Avisar a Render para que despliegue
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          set -e
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Falta el secreto RENDER_DEPLOY_HOOK: no se despliega (hay que configurarlo en GitHub)."
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST "$RENDER_DEPLOY_HOOK" > /dev/null
+          echo "Render ha recibido el aviso de despliegue."
